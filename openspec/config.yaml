@@ -1,0 +1,44 @@
+schema: spec-driven
+
+context: |
+  Project: Reword Stories — MT Novel Polisher (greenfield, personal side project for Steven)
+
+  Problem: Take raw machine-translated novel chapters (copy/paste) and post-edit them into smooth,
+  readable prose. Core job is polishing already-MT target-language text (typically English), not
+  translating from source languages from scratch.
+
+  Chosen approach: Project Pipeline (Approach B)
+  - Novel projects → paste raw MT per chapter → async translation jobs (model picker, status) → reader view
+  - Long chapters require background jobs with visible status (queued → processing → completed/failed)
+
+  Tech stack:
+  - Framework: Next.js 15 (App Router)
+  - Database: PostgreSQL + Prisma
+  - Queue: Redis + BullMQ (lockDuration: 300000 for long LLM calls)
+  - Worker: Separate Node process in same repo (/worker), not serverless
+  - UI: Tailwind CSS + shadcn/ui
+  - LLM: Provider interface with OpenAI (v1 first), Gemini and DeepL (v1.1) adapters
+
+  Data model: Novel → Chapters → Translations → TranslationChunks
+  - One paste = one chapter (max 100k chars); no delimiter splitting in v1
+  - Translation status: queued | processing | completed | failed
+  - Chunking: paragraph boundaries (~1800 tokens), sentence fallback; overlap context from prior chunk
+
+  v1 constraints:
+  - Input: copy/paste only (no URL, EPUB, or file upload)
+  - Single-user app; middleware basic auth via SITE_PASSWORD (no signup UI)
+  - Not v1: social sharing, URL/EPUB import, source-language translation, edition stacks / MT peek
+
+  Key flows: create novel (with source language tag) → paste chapter → pick provider/model → poll
+  translation status → read polished text in distraction-free reader (themes, chapter nav)
+
+  Deployment: Railway — web service, worker service, Postgres, Redis
+  Env: SITE_PASSWORD, OPENAI_API_KEY, GEMINI_API_KEY, DEEPL_API_KEY, DATABASE_URL, REDIS_URL
+
+  Product wedge: Reader for already-broken MT translations — immersive reading experience, not a chat UI.
+  Emotional center is the reader; pipeline is plumbing.
+
+rules:
+  tasks:
+    - Include tasks for linting, type checking, and build verification
+    - Do not add tasks for writing tests
