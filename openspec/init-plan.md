@@ -33,23 +33,13 @@ The magic moment is **opening a chapter that finally flows**. Not "I ran it thro
 4. **Personal-use v1:** Single-user app; sharing polished translations with friends is 10x, not v1.
 5. **Copyright awareness:** User processes content they have personal rights to read; app does not host or distribute copyrighted novels publicly in v1.
 
-## Cross-Model Perspective
+## Design Principles
 
-**SECOND OPINION (Claude subagent):**
-
-The emotional center is the **immersive reader** — everything else is plumbing. The uncrowded wedge is **post-edit + reader-as-control-surface** (peek at MT, flag paragraphs, edition history), not another source→target translation app.
-
-Key recommendations:
-- Coolest unconsidered angle: "living edition" reader with MT peek, inline re-polish, version stacks per chapter
-- 50% exists in Kavita (self-hosted ebook library + reader UX); missing half is paste-ingest, async post-edit jobs, multi-edition storage
-- Weekend MVP: Next.js + SQLite + one LLM, paste→queue→reader; skip auth, multi-model, EPUB
-- Don't let project/translation hierarchy block the read path — reader is the product
-
-**Cross-model synthesis:**
-- **Agree:** Reader is the emotional center; pipeline is plumbing. Chunking + queue are non-negotiable for novel-length text.
-- **Agree:** Post-edit wedge is narrower and less crowded than full translation (OpenNovel, Lexilit territory).
-- **Disagree on weekend scope:** User chose full Project Pipeline (Approach B), not weekend MVP. Subagent's "skip multi-model" conflicts with stated requirement — keep model picker.
-- **Deferred from subagent:** Edition stacks / inline re-polish → Approach C, 10x features.
+- **Reader is the product.** The immersive reader is the emotional center; the pipeline is plumbing. Don't let project/translation hierarchy block the read path.
+- **Post-edit, not translate.** The wedge is polishing already-MT text into readable prose — not another source→target translation app (OpenNovel, Lexilit territory).
+- **Async by default.** Chunking + background queue are non-negotiable for novel-length text.
+- **Model choice matters.** User picks provider per translation (DeepL, ChatGPT, Gemini).
+- **Deferred to v1.5+:** MT peek toggle, edition stacks, inline re-polish, glossary consistency across chapters.
 
 ## Landscape Context
 
@@ -61,41 +51,58 @@ Key recommendations:
 
 **EUREKA:** Everyone builds translators. Almost nobody builds a **reader for already-broken translations**. The product is a reading experience, not a translation API.
 
-## Approaches Considered
+## Architecture
 
-### Approach A: Weekend Reader
-**Summary:** Next.js + SQLite + one LLM. Paste chapter → polish → read. No projects, no model picker.
-**Effort:** S | **Risk:** Low
-**Pros:** Ship in a weekend; proves rewrite quality fast
-**Cons:** Re-architect when adding translations/model picker; no job status for long chapters
-**Reuses:** Nothing (greenfield)
+Next.js on Vercel + Postgres + Vercel Queues. Novel projects → paste raw content → translation jobs (model picker, status) → reader view.
 
-### Approach B: Project Pipeline (CHOSEN)
-**Summary:** Next.js + Postgres + Redis job queue. Novel projects → paste raw content → translation jobs (model picker, status) → reader view.
-**Effort:** M | **Risk:** Med
-**Pros:** Matches stated vision; handles long chapters; schema supports 10x sharing
-**Cons:** ~1-2 weeks; needs worker + DB hosting
-**Patterns borrowed from:** ePubTsuyaku (chunk checkpoints), OpenNovel (project structure)
+Patterns borrowed from: ePubTsuyaku (chunk checkpoints), OpenNovel (project structure).
 
-### Approach C: Living Edition Reader
-**Summary:** Approach B + edition stacks per chapter, MT peek toggle, inline paragraph re-polish.
-**Effort:** L | **Risk:** Med-High
-**Pros:** Coolest UX; reader as control surface
-**Cons:** Complex version model; overkill before basic loop works
-**Reuses:** B's pipeline + diff UI
+### Why serverless queues (not a separate worker)
 
-## Recommended Approach
+Chapter polishing is chunked (~1800 tokens per LLM call). Each chunk is one short LLM request (typically 15–90s) — well under Vercel’s **300s (5 min) function limit** on Hobby.
 
-**Approach B: Project Pipeline**
+| Work unit | Typical duration | Fits 5 min? |
+|-----------|------------------|-------------|
+| One chunk (one LLM call) | 15–90s | Yes |
+| ~5k-word chapter (~4–5 chunks) in one function | 2–5 min | Yes, but tight |
+| Max chapter (100k chars, ~15–25 chunks) in one function | 8–38 min | No |
+
+**Rule:** one queue message processes **one chunk**, then enqueues the next pending chunk (or marks translation complete). No separate worker process or Redis required.
+
+### Queue flow
+
+```mermaid
+sequenceDiagram
+  participant Steven
+  participant API as Next.js API
+  participant Queue as Vercel Queues
+  participant Consumer as /api/queues/process-chunk
+  participant LLM
+  participant DB as Postgres
+
+  Steven->>API: Start translation
+  API->>DB: Create Translation + Chunks
+  API->>Queue: send({ translationId })
+  API-->>Steven: status: queued
+
+  Queue->>Consumer: invoke (chunk 1)
+  Consumer->>LLM: polish one chunk
+  Consumer->>DB: save chunk, update progress
+  Consumer->>Queue: send({ translationId }) if more chunks
+
+  Note over Queue,Consumer: repeats until all chunks done
+
+  Consumer->>DB: status: completed
+```
 
 ### Tech Stack
 
 | Layer | Choice | Why |
 |-------|--------|-----|
 | Framework | Next.js 15 (App Router) | Full-stack, API routes + React UI in one repo |
-| Database | PostgreSQL + Prisma | Relational fit for projects/translations/chapters |
-| Queue | Redis + BullMQ | Battle-tested async jobs, retry, progress |
-| Worker | Separate Node process (or same repo `/worker`) | Long LLM calls off the request thread |
+| Hosting | Vercel | Serverless functions + managed queue in one platform |
+| Database | PostgreSQL + Prisma (Neon) | Relational fit for projects/translations/chapters |
+| Queue | Vercel Queues (`@vercel/queue`) | Native push consumers, retries, visibility lease extension |
 | UI | Tailwind CSS + shadcn/ui | Fast, accessible components |
 | LLM adapters | Provider interface with DeepL, OpenAI, Gemini implementations | User picks model per translation |
 
@@ -156,15 +163,17 @@ Novel (project)
 - Chapter navigation within novel
 - v1: polished text only. v1.5: toggle to peek original MT (deferred)
 
-### Worker Pipeline
+### Queue Pipeline
 
-1. **Chunking:** Split on `\n\n` paragraph boundaries using `gpt-tokenizer` (~1800 tokens max per chunk). If a single paragraph exceeds limit, split on sentence boundaries (`. `). Never mid-word.
-2. **Prompt (post-edit):** System prompt includes source language tag (`other` → generic prompt without language hints). Instruct model to preserve meaning/plot/names while fixing awkward MT phrasing. Pass last paragraph of previous chunk as overlap context (max 500 tokens).
-3. **Process:** For each chunk with `status = pending | failed`, call provider adapter → save `polished_slice` + `token_count` → mark chunk `completed` → update `progress_pct`
-4. **Assemble:** When all chunks completed, concatenate into `polished_content`, set translation `status = completed`
-5. **Resume:** On worker crash, re-enqueue job; worker skips chunks where `status = completed` (idempotent)
-6. **Retry:** 3 retries with exponential backoff on retryable errors (429, 5xx). Fail fast on 400/content-policy. `POST /api/translations/:id/retry` resets failed chunks to `pending` and re-enqueues (same Translation row, not a new one)
-7. **Bulk novel:** "Translate all chapters" enqueues one Translation job per chapter (not one parent job)
+1. **Chunking (on enqueue):** When user starts a translation, API route splits chapter on `\n\n` paragraph boundaries using `gpt-tokenizer` (~1800 tokens max per chunk). If a single paragraph exceeds limit, split on sentence boundaries (`. `). Never mid-word. Persist `TranslationChunk` rows immediately (enables pre-flight “~N chunks” estimate).
+2. **Kickoff:** API route sets translation `status = queued`, publishes one Vercel Queue message to topic `translation-chunk`: `{ translationId }`. Returns immediately.
+3. **Consumer (`/api/queues/process-chunk`):** Push handler via `handleCallback` from `@vercel/queue`. `maxDuration = 300`. Load translation; find next chunk with `status = pending | failed`; skip if none pending (idempotent no-op).
+4. **Prompt (post-edit):** System prompt includes source language tag (`other` → generic prompt without language hints). Instruct model to preserve meaning/plot/names while fixing awkward MT phrasing. Pass last paragraph of previous **completed** chunk as overlap context (max 500 tokens).
+5. **Process one chunk:** Call provider adapter → save `polished_slice` + `token_count` → mark chunk `completed` → set translation `status = processing` → update `progress_pct`.
+6. **Chain or finish:** If more pending chunks remain, `send('translation-chunk', { translationId })` for the next chunk. If all done, concatenate into `polished_content`, set `status = completed`.
+7. **Resume:** Queue retries on handler throw; consumer skips `completed` chunks (idempotent). Stale `processing` translations can be re-kicked via retry endpoint.
+8. **Retry:** Vercel Queues automatic retries with custom backoff on 429/5xx. Fail fast on 400/content-policy (acknowledge message). `POST /api/translations/:id/retry` resets failed chunks to `pending` and re-publishes kickoff message (same Translation row, not a new one).
+9. **Bulk novel:** "Translate all chapters" creates one Translation per chapter and publishes one kickoff message each (not one parent job).
 
 ### API Routes (sketch)
 
@@ -172,9 +181,10 @@ Novel (project)
 - `GET /api/novels` — list novels
 - `GET /api/novels/:id` — novel detail + chapters
 - `POST /api/novels/:id/chapters` — add chapter (paste)
-- `POST /api/chapters/:id/translations` — create translation job
+- `POST /api/chapters/:id/translations` — create translation + chunks, publish queue kickoff
 - `GET /api/translations/:id` — status + result (polled every 3s while processing)
-- `POST /api/translations/:id/retry` — reset failed chunks, re-enqueue
+- `POST /api/translations/:id/retry` — reset failed chunks, re-publish kickoff
+- `POST /api/queues/process-chunk` — Vercel Queue consumer (not public; wired via `vercel.json` trigger)
 
 ### Pages
 
@@ -210,17 +220,31 @@ All behind one interface; per-provider semantics documented in adapter.
 
 ### Deployment
 
-**Recommended v1 (single platform):** Railway project with:
-- Web service (Next.js)
-- Worker service (long-running Node process, NOT serverless — LLM jobs run minutes)
-- Postgres plugin
-- Redis plugin
+**Recommended v1:** Vercel project with:
+- Next.js app (UI + API routes)
+- Vercel Queues topic `translation-chunk` with push consumer on `/api/queues/process-chunk`
+- Neon Postgres (or Vercel Postgres)
 
-Flow: API route enqueues job to Redis → worker consumes → both share `DATABASE_URL`.
+Flow: API route publishes to Vercel Queue → Vercel invokes consumer function → consumer updates Postgres → chains next chunk message if needed.
 
-**Env vars:** `SITE_PASSWORD`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `DEEPL_API_KEY`, `DATABASE_URL`, `REDIS_URL`
+**`vercel.json` (sketch):**
 
-**BullMQ config:** `lockDuration: 300000` (5 min) for long LLM calls; stalled job recovery enabled.
+```json
+{
+  "functions": {
+    "app/api/queues/process-chunk/route.ts": {
+      "maxDuration": 300,
+      "experimentalTriggers": [
+        { "type": "queue/v2beta", "topic": "translation-chunk" }
+      ]
+    }
+  }
+}
+```
+
+**Env vars:** `SITE_PASSWORD`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `DEEPL_API_KEY`, `DATABASE_URL`
+
+**Queue config:** Consumer `visibilityTimeoutSeconds: 300` (SDK default; auto-extends while handler runs). Use `idempotencyKey: \`${translationId}-${chunkIndex}\`` when chaining to avoid duplicate chunk processing on retry.
 
 ## Open Questions
 
@@ -239,18 +263,18 @@ Flow: API route enqueues job to Redis → worker consumes → both share `DATABA
 
 ## Distribution Plan
 
-- **Deliverable:** Web application (self-hosted or deployed to Vercel/Railway)
+- **Deliverable:** Web application deployed to Vercel
 - **Access v1:** Single-user, no public signup. Deploy behind simple password or localhost for Steven.
-- **CI/CD:** GitHub Actions — lint, typecheck, test on PR; deploy to Railway/Vercel on merge to main
+- **CI/CD:** GitHub Actions — lint, typecheck, test on PR; deploy to Vercel on merge to main
 - **No app store, no package manager** — browser-only
 
 ## Next Steps
 
-1. **Scaffold:** `npx create-next-app@latest` + Prisma + BullMQ + shadcn
+1. **Scaffold:** Next.js + Prisma + `@vercel/queue` + shadcn
 2. **Schema:** Implement Novel, Chapter, Translation, TranslationChunk models
 3. **Paste flow:** Create novel → add chapter → verify raw text saves
 4. **One provider:** OpenAI adapter + post-edit prompt (prove quality before multi-model)
-5. **Worker:** Chunking + queue + progress updates
+5. **Queue consumer:** Chunking on enqueue, one-chunk-per-message pipeline, progress updates
 6. **Reader:** Distraction-free reading view with theme toggle
 7. **Multi-model:** Add DeepL + Gemini adapters
 8. **Polish:** Status badges, retry, library page
@@ -258,7 +282,7 @@ Flow: API route enqueues job to Redis → worker consumes → both share `DATABA
 ## What I noticed about how you think
 
 - You named **Steven** specifically, not "users who read translated fiction." That's a real person with a real workflow, and it kept the scope honest.
-- When I offered "single-page paste-in-paste-out," you pushed back toward the **full reader with projects and queue**. You weren't optimizing for fastest ship — you were optimizing for the product you'd actually want to use.
+- You optimized for the **full reader with projects and queue**, not the fastest possible ship — the product you'd actually want to use.
 - You tagged **source language on novel creation** even though you're not translating from source. That's builder instinct: set up metadata now so prompts work better later, even if v1 doesn't need it.
 - Your 10x is **sharing with friends**, not monetization or platform scale. This is a tool you'd be proud to show someone, not a startup pitch.
 

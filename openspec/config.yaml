@@ -7,15 +7,15 @@ context: |
   readable prose. Core job is polishing already-MT target-language text (typically English), not
   translating from source languages from scratch.
 
-  Chosen approach: Project Pipeline (Approach B)
+  Architecture: Project Pipeline
   - Novel projects → paste raw MT per chapter → async translation jobs (model picker, status) → reader view
   - Long chapters require background jobs with visible status (queued → processing → completed/failed)
 
   Tech stack:
   - Framework: Next.js 15 (App Router)
-  - Database: PostgreSQL + Prisma
-  - Queue: Redis + BullMQ (lockDuration: 300000 for long LLM calls)
-  - Worker: Separate Node process in same repo (/worker), not serverless
+  - Hosting: Vercel (serverless functions, maxDuration 300s)
+  - Database: PostgreSQL + Prisma (Neon)
+  - Queue: Vercel Queues (@vercel/queue) — one queue message per chunk, chain until complete
   - UI: Tailwind CSS + shadcn/ui
   - LLM: Provider interface with OpenAI (v1 first), Gemini and DeepL (v1.1) adapters
 
@@ -32,8 +32,8 @@ context: |
   Key flows: create novel (with source language tag) → paste chapter → pick provider/model → poll
   translation status → read polished text in distraction-free reader (themes, chapter nav)
 
-  Deployment: Railway — web service, worker service, Postgres, Redis
-  Env: SITE_PASSWORD, OPENAI_API_KEY, GEMINI_API_KEY, DEEPL_API_KEY, DATABASE_URL, REDIS_URL
+  Deployment: Vercel — Next.js app, Vercel Queues consumer, Neon Postgres
+  Env: SITE_PASSWORD, OPENAI_API_KEY, GEMINI_API_KEY, DEEPL_API_KEY, DATABASE_URL
 
   Product wedge: Reader for already-broken MT translations — immersive reading experience, not a chat UI.
   Emotional center is the reader; pipeline is plumbing.
