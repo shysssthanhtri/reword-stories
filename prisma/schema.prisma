@@ -1,5 +1,3 @@
-// Models (Novel, Chapter, Translation, TranslationChunk) — step 2
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -7,4 +5,88 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum TranslationStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+
+  @@map("translation_status")
+}
+
+enum ChunkStatus {
+  PENDING
+  COMPLETED
+  FAILED
+
+  @@map("chunk_status")
+}
+
+model Novel {
+  id             String   @id @default(cuid())
+  title          String
+  sourceLanguage String   @map("source_language")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  chapters Chapter[]
+
+  @@map("novels")
+}
+
+model Chapter {
+  id         String   @id @default(cuid())
+  title      String?
+  rawContent String   @map("raw_content") @db.Text
+  sortOrder  Int      @default(0) @map("sort_order")
+  novelId    String   @map("novel_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  novel        Novel         @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  translations Translation[]
+
+  @@index([novelId, sortOrder])
+  @@map("chapters")
+}
+
+model Translation {
+  id              String            @id @default(cuid())
+  provider        String
+  modelName       String            @map("model_name")
+  status          TranslationStatus @default(QUEUED)
+  progressPct     Int               @default(0) @map("progress_pct")
+  errorMessage    String?           @map("error_message")
+  tokenUsage      Int?              @map("token_usage")
+  polishedContent String?           @map("polished_content") @db.Text
+  chapterId       String            @map("chapter_id")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  chapter Chapter            @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  chunks  TranslationChunk[]
+
+  @@index([chapterId])
+  @@index([status])
+  @@map("translations")
+}
+
+model TranslationChunk {
+  id            String      @id @default(cuid())
+  chunkIndex    Int         @map("chunk_index")
+  rawSlice      String      @map("raw_slice") @db.Text
+  polishedSlice String?     @map("polished_slice") @db.Text
+  status        ChunkStatus @default(PENDING)
+  tokenCount    Int?        @map("token_count")
+  translationId String      @map("translation_id")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  translation Translation @relation(fields: [translationId], references: [id], onDelete: Cascade)
+
+  @@unique([translationId, chunkIndex])
+  @@index([translationId, status])
+  @@map("translation_chunks")
 }

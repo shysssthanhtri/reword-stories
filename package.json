@@ -11,7 +11,9 @@
     "check": "pnpm lint && pnpm typecheck",
     "format": "prettier --write .",
     "postinstall": "prisma generate",
-    "prepare": "husky"
+    "prepare": "husky",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
