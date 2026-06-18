@@ -1,6 +1,8 @@
 export const routes = {
   home: "/",
   novels: "/novels",
+  novelNew: "/novels/new",
+  novelDetail: (id: string) => `/novels/${id}`,
   settings: "/settings",
 } as const
 

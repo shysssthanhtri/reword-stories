@@ -104,6 +104,8 @@ sequenceDiagram
 | Database | PostgreSQL + Prisma (`@prisma/adapter-pg`) | Relational fit for projects/translations/chapters; Docker Compose locally, hosted Postgres in prod |
 | Queue | Vercel Queues (`@vercel/queue`) | Native push consumers, retries, visibility lease extension |
 | UI | Tailwind CSS + shadcn/ui | Fast, accessible components |
+| Forms | React Hook Form + Zod | shadcn `Field` + `Controller`; shared schemas with tRPC |
+| API (app) | tRPC | End-to-end type safety for queries and mutations |
 | LLM adapters | Provider interface with DeepL, OpenAI, Gemini implementations | User picks model per translation |
 
 ### Data Model

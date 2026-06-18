@@ -36,7 +36,7 @@ export function NavMain() {
   return (
     <SidebarGroup>
       <SidebarGroupContent>
-        <SidebarMenu>
+        <SidebarMenu className="gap-1">
           {navItems.map((item) => {
             const Icon = navIcons[item.key]
 
