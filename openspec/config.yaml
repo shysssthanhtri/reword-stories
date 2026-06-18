@@ -7,14 +7,17 @@ context: |
   readable prose. Core job is polishing already-MT target-language text (typically English), not
   translating from source languages from scratch.
 
-  Architecture: Project Pipeline
+  Architecture: Project Pipeline (SSR-first)
+  - Next.js App Router with server-side rendering as the default — React Server Components fetch data on the server; HTML is rendered before it reaches the browser
   - Novel projects → paste raw MT per chapter → async translation jobs (model picker, status) → reader view
   - Long chapters require background jobs with visible status (queued → processing → completed/failed)
+  - Client Components (`"use client"`) only for interactive islands (forms, theme toggle, translation status polling)
+  - Route Handlers (`app/api/**`) for mutations, queue consumers, and polling — not for page rendering
 
   Tech stack:
-  - Framework: Next.js 15 (App Router)
+  - Framework: Next.js 15 (App Router, SSR-first)
   - Hosting: Vercel (serverless functions, maxDuration 300s)
-  - Database: PostgreSQL + Prisma (Neon)
+  - Database: PostgreSQL + Prisma (`@prisma/adapter-pg`); Docker Compose locally, hosted Postgres in prod
   - Queue: Vercel Queues (@vercel/queue) — one queue message per chunk, chain until complete
   - UI: Tailwind CSS + shadcn/ui
   - LLM: Provider interface with OpenAI (v1 first), Gemini and DeepL (v1.1) adapters
@@ -32,13 +35,25 @@ context: |
   Key flows: create novel (with source language tag) → paste chapter → pick provider/model → poll
   translation status → read polished text in distraction-free reader (themes, chapter nav)
 
-  Deployment: Vercel — Next.js app, Vercel Queues consumer, Neon Postgres
+  Deployment: Vercel — Next.js app, Vercel Queues consumer, hosted PostgreSQL via Prisma
   Env: SITE_PASSWORD, OPENAI_API_KEY, GEMINI_API_KEY, DEEPL_API_KEY, DATABASE_URL
 
   Product wedge: Reader for already-broken MT translations — immersive reading experience, not a chat UI.
   Emotional center is the reader; pipeline is plumbing.
 
 rules:
+  design:
+    - Default to server-side rendering — pages and layouts are React Server Components unless interactivity requires a Client Component
+    - Fetch initial page data on the server (Prisma via `src/lib/db.ts`); do not use client-side fetch or useEffect for primary page loads
+    - Reserve `"use client"` for interactive islands only (forms, theme toggle, translation status polling)
+    - Use Route Handlers (`app/api/**`) for mutations, queue consumers, and polling endpoints — not for rendering HTML
+    - Document server vs client boundaries and data-fetching strategy in each design decision
+  specs:
+    - Specify whether each UI surface is a Server Component, Client Component, or Route Handler
+    - Initial reads (library, novel detail, reader) SHALL be server-rendered with data fetched on the server
+    - Client-side polling is allowed only for in-flight translation status updates
   tasks:
+    - Implement pages as Server Components first; add `"use client"` only when a task requires browser-only interactivity
+    - Wire data access through server-side Prisma queries, not client-side API round-trips for initial loads
     - Include tasks for linting, type checking, and build verification
     - Do not add tasks for writing tests
