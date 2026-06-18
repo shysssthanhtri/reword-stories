@@ -101,7 +101,7 @@ sequenceDiagram
 |-------|--------|-----|
 | Framework | Next.js 15 (App Router) | Full-stack, API routes + React UI in one repo |
 | Hosting | Vercel | Serverless functions + managed queue in one platform |
-| Database | PostgreSQL + Prisma (Neon) | Relational fit for projects/translations/chapters |
+| Database | PostgreSQL + Prisma (`@prisma/adapter-pg`) | Relational fit for projects/translations/chapters; Docker Compose locally, hosted Postgres in prod |
 | Queue | Vercel Queues (`@vercel/queue`) | Native push consumers, retries, visibility lease extension |
 | UI | Tailwind CSS + shadcn/ui | Fast, accessible components |
 | LLM adapters | Provider interface with DeepL, OpenAI, Gemini implementations | User picks model per translation |
@@ -223,9 +223,11 @@ All behind one interface; per-provider semantics documented in adapter.
 **Recommended v1:** Vercel project with:
 - Next.js app (UI + API routes)
 - Vercel Queues topic `translation-chunk` with push consumer on `/api/queues/process-chunk`
-- Neon Postgres (or Vercel Postgres)
+- PostgreSQL via Prisma — local dev uses Docker Compose (`pnpm docker:up`); production sets `DATABASE_URL` to any hosted Postgres instance
 
 Flow: API route publishes to Vercel Queue → Vercel invokes consumer function → consumer updates Postgres → chains next chunk message if needed.
+
+**Local database:** `docker/docker-compose.yml` runs `postgres:16-alpine` on `localhost:5432` with credentials in `.env.example`. Run `pnpm prisma migrate dev` locally; `vercel-build` runs `prisma migrate deploy` against production `DATABASE_URL`.
 
 **`vercel.json` (sketch):**
 
