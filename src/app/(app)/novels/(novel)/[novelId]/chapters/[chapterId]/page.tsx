@@ -72,7 +72,10 @@ export default async function ChapterDetailPage({
         />
       </div>
 
-      <ChapterRawContent rawContent={chapter.rawContent} />
+      <ChapterRawContent
+        rawContent={chapter.rawContent}
+        characterCount={chapter.rawContent.length}
+      />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
