@@ -5,9 +5,10 @@ export const env = createEnv({
   server: {
     DATABASE_URL: z.url(),
     SITE_PASSWORD: z.string().min(1),
-    OPENAI_API_KEY: z.string().min(1),
-    GEMINI_API_KEY: z.string().min(1),
-    DEEPL_API_KEY: z.string().min(1),
+    AI_GATEWAY_API_KEY: z.string().min(1).optional(),
+    OPENAI_API_KEY: z.string().min(1).optional(),
+    GEMINI_API_KEY: z.string().min(1).optional(),
+    DEEPL_API_KEY: z.string().min(1).optional(),
   },
   client: {},
   experimental__runtimeEnv: {},
