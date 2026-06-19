@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils"
 import type { AppRouter } from "@/server/trpc/router"
 
 export type TranslationChunkSummary =
-  inferRouterOutputs<AppRouter>["translations"]["listByChapter"][number]["chunks"][number]
+  inferRouterOutputs<AppRouter>["translations"]["getById"]["chunks"][number]
 
 type TranslationChunkListProps = {
   chunks: TranslationChunkSummary[]

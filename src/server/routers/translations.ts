@@ -32,10 +32,6 @@ const translationListSelect = {
   chapterId: true,
   createdAt: true,
   updatedAt: true,
-  chunks: {
-    orderBy: { chunkIndex: "asc" as const },
-    select: chunkSummarySelect,
-  },
 } as const
 
 function enrichTranslation<T extends { provider: string; modelName: string }>(

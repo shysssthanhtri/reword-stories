@@ -37,7 +37,11 @@ async function polish(params: PolishParams): Promise<PolishResult> {
   const { text, usage } = await generateText({
     model: gateway(params.modelId),
     system: buildPostEditSystemPrompt(params.sourceLanguage),
-    prompt: buildPostEditUserMessage(params.text, params.contextOverlap),
+    prompt: buildPostEditUserMessage(
+      params.text,
+      params.sourceLanguage,
+      params.contextOverlap,
+    ),
     temperature: 0.3,
   })
 

@@ -4,7 +4,7 @@ import type { inferRouterOutputs } from "@trpc/server"
 import Link from "next/link"
 import { useState } from "react"
 
-import { TranslationChunkList } from "@/components/translations/translation-chunk-list"
+import { TranslationProgress } from "@/components/translations/translation-progress"
 import { TranslationReviewModal } from "@/components/translations/translation-review-modal"
 import { TranslationStatusBadge } from "@/components/translations/translation-status-badge"
 import {
@@ -49,20 +49,8 @@ export function TranslationList({
   const [deletingTranslationId, setDeletingTranslationId] = useState<
     string | null
   >(null)
-  const [retryingChunkId, setRetryingChunkId] = useState<string | null>(null)
   const utils = trpc.useUtils()
   const retryTranslation = trpc.translations.retry.useMutation({
-    onSuccess: async () => {
-      await utils.translations.listByChapter.invalidate({ chapterId })
-    },
-  })
-  const retryChunk = trpc.translations.retryChunk.useMutation({
-    onMutate: ({ chunkId }) => {
-      setRetryingChunkId(chunkId)
-    },
-    onSettled: () => {
-      setRetryingChunkId(null)
-    },
     onSuccess: async () => {
       await utils.translations.listByChapter.invalidate({ chapterId })
     },
@@ -119,7 +107,9 @@ export function TranslationList({
     <>
       <ul className="flex flex-col gap-3">
         {translations.map((translation) => {
-          const isClickable = translation.status === "COMPLETED"
+          const isClickable =
+            translation.status === "COMPLETED" ||
+            translation.status === "FAILED"
 
           return (
           <li
@@ -150,16 +140,16 @@ export function TranslationList({
               />
             </div>
 
-            <TranslationChunkList
-              chunks={translation.chunks}
-              retryingChunkId={retryingChunkId}
-              onRetryChunk={(chunkId) => {
-                retryChunk.mutate({
-                  translationId: translation.id,
-                  chunkId,
-                })
-              }}
+            <TranslationProgress
+              status={translation.status}
+              progressPct={translation.progressPct}
             />
+
+            {translation.status === "FAILED" && translation.errorMessage ? (
+              <p className="text-sm text-destructive">
+                {translation.errorMessage}
+              </p>
+            ) : null}
 
             {translation.status === "FAILED" ? (
               <div className="flex flex-wrap gap-2">
