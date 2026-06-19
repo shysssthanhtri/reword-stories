@@ -246,12 +246,31 @@ export const translationsRouter = router({
         })
       }
 
-      if (chunk.status !== "FAILED") {
+      const translation = await ctx.db.translation.findUnique({
+        where: { id: input.translationId },
+        select: {
+          chunks: {
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+        },
+      })
+
+      if (!translation) {
         throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Only failed chunks can be retried",
+          code: "NOT_FOUND",
+          message: "Translation not found",
         })
       }
+
+      const completedCount = translation.chunks.filter(
+        (item) => item.status === "COMPLETED" && item.id !== chunk.id,
+      ).length
+      const totalCount = translation.chunks.length
+      const progressPct =
+        totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
       await ctx.db.$transaction([
         ctx.db.translationChunk.update({
@@ -259,6 +278,8 @@ export const translationsRouter = router({
           data: {
             status: "PENDING",
             errorMessage: null,
+            polishedSlice: null,
+            tokenCount: null,
           },
         }),
         ctx.db.translation.update({
@@ -266,6 +287,8 @@ export const translationsRouter = router({
           data: {
             status: "QUEUED",
             errorMessage: null,
+            polishedContent: null,
+            progressPct,
           },
         }),
       ])

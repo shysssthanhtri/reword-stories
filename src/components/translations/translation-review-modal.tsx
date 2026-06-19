@@ -64,7 +64,7 @@ function ReviewBody({
         chunks={translation.chunks}
         retryingChunkId={retryingChunkId}
         onRetryChunk={onRetryChunk}
-        showRetry={translation.status === "FAILED"}
+        collapsible={false}
       />
     </div>
   )

@@ -25,6 +25,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { routes } from "@/configs/routes"
+import { cn } from "@/lib/utils"
 import type { AppRouter } from "@/server/trpc/router"
 import { trpc } from "@/trpc/react"
 
@@ -117,11 +118,22 @@ export function TranslationList({
   return (
     <>
       <ul className="flex flex-col gap-3">
-        {translations.map((translation) => (
+        {translations.map((translation) => {
+          const isClickable = translation.status === "COMPLETED"
+
+          return (
           <li
             key={translation.id}
-            className="flex cursor-pointer flex-col gap-2 rounded-lg border p-4 transition-colors hover:bg-muted/50"
-            onClick={() => setSelectedTranslationId(translation.id)}
+            className={cn(
+              "flex flex-col gap-2 rounded-lg border p-4",
+              isClickable &&
+                "cursor-pointer transition-colors hover:bg-muted/50",
+            )}
+            onClick={
+              isClickable
+                ? () => setSelectedTranslationId(translation.id)
+                : undefined
+            }
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-col gap-1">
@@ -192,7 +204,8 @@ export function TranslationList({
               </div>
             ) : null}
           </li>
-        ))}
+          )
+        })}
       </ul>
 
       <TranslationReviewModal

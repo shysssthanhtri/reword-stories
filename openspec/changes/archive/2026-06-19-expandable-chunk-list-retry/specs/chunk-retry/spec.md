@@ -1,27 +1,4 @@
-# Chunk Retry
-
-Per-chunk retry API and queue kickoff for failed translation segments.
-
-## Requirements
-
-### Requirement: Chunk retry validation schema
-
-The application SHALL define `retryChunkInputSchema` in `src/lib/validations/translation.ts` with:
-
-- `translationId` — required string (cuid)
-- `chunkId` — required string (cuid)
-
-The schema SHALL be used by `translations.retryChunk`.
-
-#### Scenario: Valid chunk retry input accepted
-
-- **WHEN** retry input includes a valid `translationId` and `chunkId`
-- **THEN** validation passes
-
-#### Scenario: Missing chunk id rejected
-
-- **WHEN** retry input omits `chunkId`
-- **THEN** validation fails before any database write
+## MODIFIED Requirements
 
 ### Requirement: Retry chunk tRPC procedure
 
@@ -55,16 +32,10 @@ The queue consumer SHALL process the retried chunk when it is the next pending o
 - **WHEN** `translations.retryChunk` is called with a `chunkId` that belongs to a different translation
 - **THEN** the procedure returns a BAD_REQUEST error
 
-### Requirement: Chunk failure persists error on chunk row
+## REMOVED Requirements
 
-When the queue consumer marks a chunk `FAILED`, it SHALL persist the error text on the chunk's `errorMessage` field. When a chunk begins processing or is reset for retry, the consumer or retry mutation SHALL clear that chunk's `errorMessage`.
+### Requirement: Retry rejected for non-failed chunk
 
-#### Scenario: Failed chunk stores error message
+**Reason**: Users may re-run completed or pending chunks intentionally; FAILED-only guard removed.
 
-- **WHEN** the queue consumer catches an error while polishing a chunk
-- **THEN** the chunk row is updated with `status = FAILED` and a non-null `errorMessage`
-
-#### Scenario: Retry clears chunk error
-
-- **WHEN** `translations.retryChunk` succeeds for a failed chunk
-- **THEN** that chunk's `errorMessage` is null and `status` is `PENDING`
+**Migration**: Call `retryChunk` for any chunk status; no client workaround needed.
