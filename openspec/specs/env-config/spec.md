@@ -15,13 +15,18 @@ The project SHALL use `@t3-oss/env-nextjs` with Zod schemas to validate environm
 
 #### Scenario: Server env vars validated
 
-- **WHEN** the application starts with missing or invalid required server env vars (`DATABASE_URL`, `SITE_PASSWORD`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `DEEPL_API_KEY`)
+- **WHEN** the application starts with missing or invalid required server env vars (`DATABASE_URL`, `SITE_PASSWORD`)
 - **THEN** startup fails with a clear Zod validation error listing the missing/invalid variable
 
 #### Scenario: Application code uses typed env
 
 - **WHEN** server-side code needs an environment variable
 - **THEN** it imports from the typed `env` module rather than accessing `process.env` directly
+
+#### Scenario: Optional gateway and direct provider keys
+
+- **WHEN** the application starts without `AI_GATEWAY_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, or `DEEPL_API_KEY`
+- **THEN** startup succeeds — `AI_GATEWAY_API_KEY` is optional (Vercel OIDC on deploy); direct provider keys are optional until native adapters are implemented
 
 ### Requirement: Env example documented
 
@@ -30,7 +35,7 @@ The project SHALL include a `.env.example` file listing all required environment
 #### Scenario: Example file lists all vars
 
 - **WHEN** inspecting `.env.example`
-- **THEN** it documents `DATABASE_URL`, `SITE_PASSWORD`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, and `DEEPL_API_KEY`
+- **THEN** it documents `DATABASE_URL`, `SITE_PASSWORD`, `AI_GATEWAY_API_KEY`, and optional `OPENAI_API_KEY`, `GEMINI_API_KEY`, and `DEEPL_API_KEY`
 
 #### Scenario: Example is safe to commit
 
