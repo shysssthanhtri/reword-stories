@@ -2,7 +2,9 @@
 
 import type { inferRouterOutputs } from "@trpc/server"
 import Link from "next/link"
+import { useState } from "react"
 
+import { TranslationReviewModal } from "@/components/translations/translation-review-modal"
 import { TranslationStatusBadge } from "@/components/translations/translation-status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,6 +31,9 @@ export function TranslationList({
   chapterId,
   initialTranslations,
 }: TranslationListProps) {
+  const [selectedTranslationId, setSelectedTranslationId] = useState<
+    string | null
+  >(null)
   const utils = trpc.useUtils()
   const retryTranslation = trpc.translations.retry.useMutation({
     onSuccess: async () => {
@@ -75,11 +80,13 @@ export function TranslationList({
   }
 
   return (
-    <ul className="flex flex-col gap-3">
+    <>
+      <ul className="flex flex-col gap-3">
         {translations.map((translation) => (
           <li
             key={translation.id}
-            className="flex flex-col gap-2 rounded-lg border p-4"
+            className="flex cursor-pointer flex-col gap-2 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+            onClick={() => setSelectedTranslationId(translation.id)}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-col gap-1">
@@ -108,9 +115,10 @@ export function TranslationList({
                   size="sm"
                   variant="outline"
                   disabled={retryTranslation.isPending}
-                  onClick={() =>
+                  onClick={(event) => {
+                    event.stopPropagation()
                     retryTranslation.mutate({ id: translation.id })
-                  }
+                  }}
                 >
                   {retryTranslation.isPending ? "Retrying..." : "Retry"}
                 </Button>
@@ -118,6 +126,17 @@ export function TranslationList({
             ) : null}
           </li>
         ))}
-    </ul>
+      </ul>
+
+      <TranslationReviewModal
+        open={selectedTranslationId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedTranslationId(null)
+          }
+        }}
+        translationId={selectedTranslationId}
+      />
+    </>
   )
 }

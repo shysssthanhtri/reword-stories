@@ -13,6 +13,19 @@ import {
 } from "@/lib/validations/translation"
 import { publicProcedure, router } from "@/server/trpc/init"
 
+const translationListSelect = {
+  id: true,
+  provider: true,
+  modelName: true,
+  status: true,
+  progressPct: true,
+  errorMessage: true,
+  tokenUsage: true,
+  chapterId: true,
+  createdAt: true,
+  updatedAt: true,
+} as const
+
 function enrichTranslation<T extends { provider: string; modelName: string }>(
   translation: T,
 ) {
@@ -131,6 +144,7 @@ export const translationsRouter = router({
       const translations = await ctx.db.translation.findMany({
         where: { chapterId: input.chapterId },
         orderBy: { createdAt: "desc" },
+        select: translationListSelect,
       })
 
       return translations.map(enrichTranslation)
