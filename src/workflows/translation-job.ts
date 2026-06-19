@@ -1,11 +1,18 @@
 import { FatalError, sleep } from "workflow"
 
+import { env } from "@/env"
 import { assemblePolishedContent } from "@/lib/chunking/assemble-chunks"
 import { extractOverlapContext } from "@/lib/chunking/overlap-context"
 import { db } from "@/lib/db"
 import { getErrorMessage } from "@/lib/llm/error-utils"
 import { getProvider } from "@/lib/llm/providers"
 import { TRANSLATION_JOB_LOG_PREFIX } from "@/lib/workflow/log-prefix"
+
+type SleepDuration = `${number}${"ms" | "s" | "m" | "h" | "d" | "w" | "y"}`
+
+const CHUNK_POLISH_RATE_LIMIT = env.CHUNK_POLISH_RATE_LIMIT
+const CHUNK_POLISH_RATE_LIMIT_WINDOW =
+  env.CHUNK_POLISH_RATE_LIMIT_WINDOW as SleepDuration
 
 const chunkWithTranslationInclude = {
   translation: {
@@ -303,8 +310,8 @@ export async function translationJob(translationId: string) {
       continue
     }
 
-    if (processedInWindow >= 3) {
-      await sleep("60s")
+    if (processedInWindow >= CHUNK_POLISH_RATE_LIMIT) {
+      await sleep(CHUNK_POLISH_RATE_LIMIT_WINDOW)
       processedInWindow = 0
     }
 
