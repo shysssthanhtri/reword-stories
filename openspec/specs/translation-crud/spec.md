@@ -144,7 +144,9 @@ Initial translation list data SHALL be server-fetched via `translations.listByCh
 
 ### Requirement: Translation list UI on chapter detail
 
-The chapter detail page translations section SHALL display each translation with provider label, model label, overall status badge, and a **collapsible** list of chunks. The chunk list SHALL be **collapsed by default**. A toggle control (e.g. "Show chunks (N)" / "Hide chunks") SHALL expand or collapse the chunk rows. Each chunk row SHALL show chunk number (1-based label derived from `chunkIndex`), chunk status badge, and chunk `errorMessage` when failed.
+The chapter detail page translations section SHALL display each translation with provider label, model label, overall status badge, and a **collapsible** list of chunks. The chunk list SHALL be **collapsed by default**. A toggle control (e.g. "Show chunks (N)" / "Hide chunks") SHALL expand or collapse the chunk rows. The toggle control SHALL use a pointer cursor and a visible hover affordance (e.g. background or text color change) to indicate it is interactive.
+
+When expanded, chunk rows SHALL be rendered as a **table** with columns for chunk number (1-based label derived from `chunkIndex`), status badge, error message (when failed), and retry action. Each chunk row SHALL show chunk `errorMessage` when failed.
 
 Each translation row SHALL open the translation review modal **only when translation status is `COMPLETED`**. Rows with status `QUEUED`, `PROCESSING`, or `FAILED` SHALL NOT be clickable for modal open and SHALL NOT use pointer/hover affordances that imply clickability. Chunk expand/collapse toggles and chunk retry buttons SHALL NOT open the modal (click event SHALL NOT propagate to the row handler).
 
@@ -170,6 +172,16 @@ The Delete button click event SHALL NOT propagate to the row handler (same patte
 
 - **WHEN** user clicks the chunk list toggle on a translation row
 - **THEN** per-chunk status rows are visible without opening the review modal
+
+#### Scenario: Chunk toggle shows hover affordance
+
+- **WHEN** user hovers over the Show chunks / Hide chunks toggle
+- **THEN** the cursor changes to pointer and a visible hover style is applied
+
+#### Scenario: Chunk rows render as table
+
+- **WHEN** the chunk list is expanded on the chapter detail page or shown in the review modal
+- **THEN** chunks are displayed in a table with columns for number, status, error (when failed), and retry action
 
 #### Scenario: Any chunk shows per-chunk retry
 

@@ -10,6 +10,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import type { AppRouter } from "@/server/trpc/router"
 
@@ -35,51 +43,64 @@ export function TranslationChunkList({
     return null
   }
 
-  const chunkRows = (
-    <ul className="flex flex-col gap-1.5 border-t pt-2">
-      {chunks.map((chunk) => (
-        <li
-          key={chunk.id}
-          className="flex flex-wrap items-center justify-between gap-2 text-sm"
-        >
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-muted-foreground">
-                Chunk {chunk.chunkIndex + 1}
-              </span>
-              <ChunkStatusBadge status={chunk.status} />
-            </div>
-            {chunk.status === "FAILED" && chunk.errorMessage ? (
-              <p className="text-xs text-destructive">{chunk.errorMessage}</p>
+  const chunkTable = (
+    <div className="border-t pt-2">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Chunk</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Error</TableHead>
+            {showRetry && onRetryChunk ? (
+              <TableHead className="text-right">Actions</TableHead>
             ) : null}
-          </div>
-          {showRetry && onRetryChunk ? (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={retryingChunkId === chunk.id}
-              onClick={(event) => {
-                event.stopPropagation()
-                onRetryChunk(chunk.id)
-              }}
-            >
-              {retryingChunkId === chunk.id ? "Retrying..." : "Retry"}
-            </Button>
-          ) : null}
-        </li>
-      ))}
-    </ul>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {chunks.map((chunk) => (
+            <TableRow key={chunk.id}>
+              <TableCell className="text-muted-foreground">
+                {chunk.chunkIndex + 1}
+              </TableCell>
+              <TableCell>
+                <ChunkStatusBadge status={chunk.status} />
+              </TableCell>
+              <TableCell className="max-w-xs whitespace-normal wrap-break-word text-xs text-destructive">
+                {chunk.status === "FAILED" && chunk.errorMessage
+                  ? chunk.errorMessage
+                  : null}
+              </TableCell>
+              {showRetry && onRetryChunk ? (
+                <TableCell className="text-right">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={retryingChunkId === chunk.id}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onRetryChunk(chunk.id)
+                    }}
+                  >
+                    {retryingChunkId === chunk.id ? "Retrying..." : "Retry"}
+                  </Button>
+                </TableCell>
+              ) : null}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 
   if (!collapsible) {
-    return chunkRows
+    return chunkTable
   }
 
   return (
     <Collapsible defaultOpen={false}>
       <CollapsibleTrigger
         className={cn(
-          "group/trigger flex w-full items-center gap-2 text-sm text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          "group/trigger flex w-full cursor-pointer items-center gap-2 rounded-sm text-sm text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
         )}
         onClick={(event) => {
           event.stopPropagation()
@@ -94,7 +115,7 @@ export function TranslationChunkList({
         </span>
         <span className="hidden group-aria-expanded/trigger:inline">Hide chunks</span>
       </CollapsibleTrigger>
-      <CollapsibleContent>{chunkRows}</CollapsibleContent>
+      <CollapsibleContent>{chunkTable}</CollapsibleContent>
     </Collapsible>
   )
 }
