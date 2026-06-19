@@ -19,6 +19,7 @@ DEFAULT_MAX_LENGTH = 512
 image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "transformers==4.46.3",
     "torch==2.5.1",
+    "sentencepiece==0.2.0",
     "fastapi[standard]==0.124.4",
 )
 
