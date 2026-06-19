@@ -1,14 +1,7 @@
 {
   "functions": {
-    "src/app/api/queues/process-chunk/route.ts": {
-      "maxDuration": 300,
-      "experimentalTriggers": [
-        {
-          "type": "queue/v2beta",
-          "topic": "translation-chunk",
-          "maxConcurrency": 5
-        }
-      ]
+    "src/app/.well-known/workflow/v1/step/route.ts": {
+      "maxDuration": 300
     }
   }
 }

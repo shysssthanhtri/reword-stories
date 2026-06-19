@@ -1,6 +1,6 @@
 # App Scaffold
 
-Foundation for Reword Stories: Next.js App Router, Prisma PostgreSQL, Vercel Queues skeleton, and shadcn/ui component library.
+Foundation for Reword Stories: Next.js App Router, Prisma PostgreSQL, Vercel Workflows setup, and shadcn/ui component library.
 
 ## Requirements
 
@@ -37,19 +37,21 @@ The project SHALL include Prisma ORM v7 configured for PostgreSQL with a `prisma
 - **WHEN** inspecting `src/lib/db.ts`
 - **THEN** it instantiates `PrismaClient` with `@prisma/adapter-pg` using the typed `env.DATABASE_URL`
 
-### Requirement: Vercel Queue consumer skeleton
+### Requirement: Vercel queue consumer skeleton
 
-The project SHALL include `@vercel/queue` as a dependency and a push consumer route skeleton at `src/app/api/queues/process-chunk/route.ts` wired for future chunk processing.
+The project SHALL include a Workflow SDK setup for durable translation jobs instead of a `@vercel/queue` push consumer.
 
-#### Scenario: Queue route exports handler
+The project SHALL install the `workflow` npm package and wrap `next.config.ts` with `withWorkflow()` from `workflow/next`.
 
-- **WHEN** inspecting the process-chunk API route
-- **THEN** it exports a `POST` handler using `@vercel/queue` `handleCallback` (or equivalent SDK pattern) as a no-op or stub that returns 200
+#### Scenario: Workflow package installed
 
-#### Scenario: Vercel queue trigger configured
+- **WHEN** inspecting `package.json`
+- **THEN** `workflow` is listed as a dependency
 
-- **WHEN** inspecting `vercel.json`
-- **THEN** it declares a queue/v2beta trigger for topic `translation-chunk` on the process-chunk route with `maxDuration` 300
+#### Scenario: Next config wrapped with withWorkflow
+
+- **WHEN** inspecting `next.config.ts`
+- **THEN** the default export uses `withWorkflow()` from `workflow/next`
 
 ### Requirement: shadcn/ui initialized
 

@@ -31,15 +31,15 @@ The schema SHALL be used by `translations.create` and the create-translation Rea
 
 ### Requirement: Translations tRPC router procedures
 
-The `translations` router SHALL expose:
+The `translations` router SHALL expose the following procedures (see `translation-workflow` and `chunk-retry` specs for job and retry semantics):
 
 - `listProviders` — query returning registered providers with `{ id, label, models: [{ id, label, isFree? }] }`
 - `estimateChunks` — query accepting `{ chapterId }` returning `{ chunkCount }` by running chunking on the chapter's raw content (NOT_FOUND if chapter missing)
-- `create` — mutation accepting `{ chapterId, provider, modelName }` creating Translation + chunks, kicking off queue, returning `{ id, status, progressPct }`
+- `create` — mutation accepting `{ chapterId, provider, modelName }` creating Translation + chunks (`PENDING`), starting a translation workflow job, returning `{ id, status, progressPct }`
 - `getById` — query accepting `{ id }` returning translation fields including `polishedContent` and an ordered `chunks` array for review (NOT_FOUND if missing)
 - `listByChapter` — query accepting `{ chapterId }` returning translations for the chapter ordered by `createdAt` desc, each including an ordered `chunks` summary array and excluding `polishedContent` from the response
-- `retry` — mutation accepting `{ id }` resetting all failed chunks and re-kickoff (BAD_REQUEST if not `FAILED`, NOT_FOUND if missing)
-- `retryChunk` — mutation accepting `{ translationId, chunkId }` resetting a single chunk and re-kickoff regardless of chunk status (see chunk-retry spec)
+- `retry` — mutation accepting `{ id }` resetting all failed chunks to `PENDING` and starting a translation workflow job (BAD_REQUEST if not `FAILED`, NOT_FOUND if missing)
+- `retryChunk` — mutation accepting `{ translationId, chunkId }` resetting a single chunk to `PENDING` and starting a translation workflow job regardless of chunk status (see chunk-retry spec)
 - `delete` — mutation accepting `{ id }` deleting the translation and its translation chunks via database cascade; returning `{ id: string }` on success
 
 Each chunk summary in list and detail responses SHALL include: `id`, `chunkIndex`, `status`, and `errorMessage` (when failed). Chunk summaries SHALL NOT include `rawSlice` or `polishedSlice` in list responses.
@@ -50,8 +50,8 @@ On `delete`, if the translation does not exist, the procedure SHALL return a NOT
 
 #### Scenario: Create returns queued translation
 
-- **WHEN** `translations.create` is called with valid chapter, provider, and model
-- **THEN** a Translation row is inserted with `status = QUEUED` and chunk rows exist
+- **WHEN** `translations.create` is called with valid input
+- **THEN** a Translation row is inserted with `status = QUEUED`, chunk rows exist with `status = PENDING`, and a translation workflow job is started
 
 #### Scenario: List providers returns gateway
 

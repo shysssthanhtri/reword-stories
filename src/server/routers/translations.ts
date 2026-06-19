@@ -1,7 +1,6 @@
 import { TRPCError } from "@trpc/server"
 
 import { splitIntoChunks } from "@/lib/chunking/split-chapter"
-import { kickoffTranslation } from "@/lib/queue/translation-queue"
 import {
   createTranslationInputSchema,
   estimateChunksInputSchema,
@@ -12,6 +11,7 @@ import {
   retryChunkInputSchema,
   translationIdInputSchema,
 } from "@/lib/validations/translation"
+import { startTranslationJob } from "@/lib/workflow/start-translation-job"
 import { publicProcedure, router } from "@/server/trpc/init"
 
 const chunkSummarySelect = {
@@ -110,9 +110,15 @@ export const translationsRouter = router({
             })),
           },
         },
+        include: {
+          chunks: {
+            select: { id: true },
+            orderBy: { chunkIndex: "asc" },
+          },
+        },
       })
 
-      await kickoffTranslation(translation.id)
+      await startTranslationJob(translation.id)
 
       return {
         id: translation.id,
@@ -212,7 +218,7 @@ export const translationsRouter = router({
         }),
       ])
 
-      await kickoffTranslation(translation.id)
+      await startTranslationJob(translation.id)
 
       return {
         id: translation.id,
@@ -249,6 +255,7 @@ export const translationsRouter = router({
       const translation = await ctx.db.translation.findUnique({
         where: { id: input.translationId },
         select: {
+          status: true,
           chunks: {
             select: {
               id: true,
@@ -262,6 +269,13 @@ export const translationsRouter = router({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Translation not found",
+        })
+      }
+
+      if (translation.status === "PROCESSING") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Translation is already processing",
         })
       }
 
@@ -293,7 +307,7 @@ export const translationsRouter = router({
         }),
       ])
 
-      await kickoffTranslation(input.translationId)
+      await startTranslationJob(input.translationId)
 
       return {
         translationId: input.translationId,

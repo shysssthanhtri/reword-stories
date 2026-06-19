@@ -1,27 +1,4 @@
-# Chunk Retry
-
-Per-chunk retry API and translation workflow job restart for failed translation segments.
-
-## Requirements
-
-### Requirement: Chunk retry validation schema
-
-The application SHALL define `retryChunkInputSchema` in `src/lib/validations/translation.ts` with:
-
-- `translationId` — required string (cuid)
-- `chunkId` — required string (cuid)
-
-The schema SHALL be used by `translations.retryChunk`.
-
-#### Scenario: Valid chunk retry input accepted
-
-- **WHEN** retry input includes a valid `translationId` and `chunkId`
-- **THEN** validation passes
-
-#### Scenario: Missing chunk id rejected
-
-- **WHEN** retry input omits `chunkId`
-- **THEN** validation fails before any database write
+## MODIFIED Requirements
 
 ### Requirement: Retry chunk tRPC procedure
 
