@@ -89,16 +89,23 @@ export function NovelLibraryHeader() {
   )
 }
 
-export function NovelChaptersEmptyState() {
+export function NovelChaptersEmptyState({ novelId }: { novelId: string }) {
   return (
     <Empty className="border">
       <EmptyHeader>
         <EmptyTitle>No chapters yet</EmptyTitle>
         <EmptyDescription>
-          Chapter paste is coming next. You will be able to add raw chapters here
-          soon.
+          Paste your first machine-translated chapter to get started.
         </EmptyDescription>
       </EmptyHeader>
+      <EmptyContent>
+        <Button
+          nativeButton={false}
+          render={<Link href={routes.chapterNew(novelId)} />}
+        >
+          Add chapter
+        </Button>
+      </EmptyContent>
     </Empty>
   )
 }

@@ -3,6 +3,9 @@ export const routes = {
   novels: "/novels",
   novelNew: "/novels/new",
   novelDetail: (id: string) => `/novels/${id}`,
+  chapterNew: (novelId: string) => `/novels/${novelId}/chapters/new`,
+  chapterDetail: (novelId: string, chapterId: string) =>
+    `/novels/${novelId}/chapters/${chapterId}`,
   settings: "/settings",
 } as const
 

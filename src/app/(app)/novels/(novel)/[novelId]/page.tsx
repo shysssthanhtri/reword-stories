@@ -46,17 +46,28 @@ export default async function NovelDetailPage({ params }: NovelDetailPageProps) 
       />
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Chapters</h2>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-medium">Chapters</h2>
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={<Link href={routes.chapterNew(novelId)} />}
+          >
+            Add Chapter
+          </Button>
+        </div>
         {novel.chapters.length === 0 ? (
-          <NovelChaptersEmptyState />
+          <NovelChaptersEmptyState novelId={novelId} />
         ) : (
           <ul className="flex flex-col gap-2">
             {novel.chapters.map((chapter) => (
-              <li
-                key={chapter.id}
-                className="rounded-lg border px-4 py-3 text-sm"
-              >
-                {chapter.title ?? `Chapter ${chapter.sortOrder + 1}`}
+              <li key={chapter.id}>
+                <Link
+                  href={routes.chapterDetail(novelId, chapter.id)}
+                  className="block rounded-lg border px-4 py-3 text-sm transition-colors hover:bg-muted/30"
+                >
+                  {chapter.title ?? `Chapter ${chapter.sortOrder + 1}`}
+                </Link>
               </li>
             ))}
           </ul>
