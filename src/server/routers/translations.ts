@@ -278,4 +278,36 @@ export const translationsRouter = router({
         status: "QUEUED" as const,
       }
     }),
+
+  delete: publicProcedure
+    .input(translationIdInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const translation = await ctx.db.translation.findUnique({
+        where: { id: input.id },
+        select: { id: true, status: true },
+      })
+
+      if (!translation) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Translation not found",
+        })
+      }
+
+      if (
+        translation.status === "QUEUED" ||
+        translation.status === "PROCESSING"
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "In-flight translations cannot be deleted",
+        })
+      }
+
+      await ctx.db.translation.delete({
+        where: { id: input.id },
+      })
+
+      return { id: input.id }
+    }),
 })

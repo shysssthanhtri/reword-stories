@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import {
   createNovelSchema,
+  novelIdInputSchema,
   novelListInputSchema,
 } from "@/lib/validations/novel"
 import { publicProcedure, router } from "@/server/trpc/init"
@@ -79,5 +80,27 @@ export const novelsRouter = router({
       return ctx.db.novel.create({
         data: input,
       })
+    }),
+
+  delete: publicProcedure
+    .input(novelIdInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const novel = await ctx.db.novel.findUnique({
+        where: { id: input.id },
+        select: { id: true },
+      })
+
+      if (!novel) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Novel not found",
+        })
+      }
+
+      await ctx.db.novel.delete({
+        where: { id: input.id },
+      })
+
+      return { id: input.id }
     }),
 })

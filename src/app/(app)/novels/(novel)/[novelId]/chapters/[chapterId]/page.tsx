@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 
 import { ChapterDetailHeader } from "@/components/chapters/chapter-detail-header"
 import { ChapterRawContent } from "@/components/chapters/chapter-raw-content"
+import { DeleteChapterButton } from "@/components/chapters/delete-chapter-button"
 import { TranslationList } from "@/components/translations/translation-list"
 import { Button } from "@/components/ui/button"
 import { routes } from "@/configs/routes"
@@ -57,11 +58,19 @@ export default async function ChapterDetailPage({
         ← Back to novel
       </Button>
 
-      <ChapterDetailHeader
-        title={chapter.title}
-        sortOrder={chapter.sortOrder}
-        characterCount={chapter.rawContent.length}
-      />
+      <div className="flex items-start justify-between gap-4">
+        <ChapterDetailHeader
+          title={chapter.title}
+          sortOrder={chapter.sortOrder}
+          characterCount={chapter.rawContent.length}
+        />
+        <DeleteChapterButton
+          novelId={novelId}
+          chapterId={chapterId}
+          title={chapter.title}
+          sortOrder={chapter.sortOrder}
+        />
+      </div>
 
       <ChapterRawContent rawContent={chapter.rawContent} />
 

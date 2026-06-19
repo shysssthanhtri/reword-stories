@@ -40,10 +40,13 @@ The `translations` router SHALL expose:
 - `listByChapter` — query accepting `{ chapterId }` returning translations for the chapter ordered by `createdAt` desc, each including an ordered `chunks` summary array and excluding `polishedContent` from the response
 - `retry` — mutation accepting `{ id }` resetting all failed chunks and re-kickoff (BAD_REQUEST if not `FAILED`, NOT_FOUND if missing)
 - `retryChunk` — mutation accepting `{ translationId, chunkId }` resetting a single failed chunk and re-kickoff (see chunk-retry spec)
+- `delete` — mutation accepting `{ id }` deleting the translation and its translation chunks via database cascade; returning `{ id: string }` on success
 
 Each chunk summary in list and detail responses SHALL include: `id`, `chunkIndex`, `status`, and `errorMessage` (when failed). Chunk summaries SHALL NOT include `rawSlice` or `polishedSlice` in list responses.
 
 The router SHALL be registered on the root `AppRouter`.
+
+On `delete`, if the translation does not exist, the procedure SHALL return a NOT_FOUND tRPC error. If the translation status is `QUEUED` or `PROCESSING`, the procedure SHALL return a BAD_REQUEST tRPC error with a message that in-flight translations cannot be deleted.
 
 #### Scenario: Create returns queued translation
 
@@ -79,6 +82,21 @@ The router SHALL be registered on the root `AppRouter`.
 
 - **WHEN** `translations.listByChapter` is called for a chapter with an in-flight translation
 - **THEN** each translation item includes a `chunks` array ordered by `chunkIndex` with status per chunk
+
+#### Scenario: Delete removes translation and chunks
+
+- **WHEN** `translations.delete` is called for a translation with status `COMPLETED` or `FAILED`
+- **THEN** the translation row and all related translation chunk rows are removed from the database
+
+#### Scenario: Delete blocked while in flight
+
+- **WHEN** `translations.delete` is called for a translation with status `QUEUED` or `PROCESSING`
+- **THEN** the procedure returns a BAD_REQUEST error and no rows are deleted
+
+#### Scenario: Delete not found
+
+- **WHEN** `translations.delete` is called with a non-existent id
+- **THEN** the procedure returns a NOT_FOUND tRPC error
 
 ### Requirement: Translate page at /novels/[novelId]/chapters/[chapterId]/translate
 
@@ -134,6 +152,10 @@ When no translations exist, the empty state SHALL include a link or button to th
 
 Failed translations SHALL expose a **Retry all** action calling `translations.retry`. Individual failed chunks SHALL expose a **Retry** action calling `translations.retryChunk`.
 
+Completed and failed translations SHALL expose a **Delete** action calling `translations.delete` after confirmation in a shadcn `AlertDialog`. Translations with status `QUEUED` or `PROCESSING` SHALL NOT show a delete action.
+
+The Delete button click event SHALL NOT propagate to the row handler (same pattern as Retry).
+
 #### Scenario: Empty state links to translate
 
 - **WHEN** a chapter has no translations
@@ -153,6 +175,21 @@ Failed translations SHALL expose a **Retry all** action calling `translations.re
 
 - **WHEN** user clicks a translation row on the chapter detail page (outside chunk action buttons)
 - **THEN** the translation review modal opens for that translation
+
+#### Scenario: Completed translation can be deleted
+
+- **WHEN** user clicks **Delete** on a completed translation, confirms in the dialog, and the mutation succeeds
+- **THEN** the translation is removed from the list without a full page reload
+
+#### Scenario: In-flight translation has no delete action
+
+- **WHEN** a translation has status `QUEUED` or `PROCESSING`
+- **THEN** no delete button is shown for that translation row
+
+#### Scenario: Delete does not open modal
+
+- **WHEN** user clicks the Delete button on a deletable translation
+- **THEN** the delete confirmation dialog opens and the review modal does not open
 
 ### Requirement: Translation review modal on chapter detail
 

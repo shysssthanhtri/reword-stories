@@ -9,6 +9,10 @@ export const createChapterInputSchema = createChapterSchema.extend({
   novelId: z.string(),
 })
 
+export const chapterIdInputSchema = z.object({
+  id: z.string().min(1),
+})
+
 export const chapterListSortBySchema = z.enum(["sortOrder", "createdAt"])
 export const chapterListSortDirSchema = z.enum(["asc", "desc"])
 

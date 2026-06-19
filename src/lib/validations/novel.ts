@@ -7,6 +7,10 @@ export const createNovelSchema = z.object({
   sourceLanguage: sourceLanguageSchema,
 })
 
+export const novelIdInputSchema = z.object({
+  id: z.string().min(1),
+})
+
 export const novelListSortBySchema = z.enum(["createdAt", "chapterCount"])
 export const novelListSortDirSchema = z.enum(["asc", "desc"])
 

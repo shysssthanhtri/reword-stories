@@ -7,6 +7,16 @@ import { useState } from "react"
 import { TranslationChunkList } from "@/components/translations/translation-chunk-list"
 import { TranslationReviewModal } from "@/components/translations/translation-review-modal"
 import { TranslationStatusBadge } from "@/components/translations/translation-status-badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Empty,
@@ -35,6 +45,9 @@ export function TranslationList({
   const [selectedTranslationId, setSelectedTranslationId] = useState<
     string | null
   >(null)
+  const [deletingTranslationId, setDeletingTranslationId] = useState<
+    string | null
+  >(null)
   const [retryingChunkId, setRetryingChunkId] = useState<string | null>(null)
   const utils = trpc.useUtils()
   const retryTranslation = trpc.translations.retry.useMutation({
@@ -51,6 +64,12 @@ export function TranslationList({
     },
     onSuccess: async () => {
       await utils.translations.listByChapter.invalidate({ chapterId })
+    },
+  })
+  const deleteTranslation = trpc.translations.delete.useMutation({
+    onSuccess: async () => {
+      await utils.translations.listByChapter.invalidate({ chapterId })
+      setDeletingTranslationId(null)
     },
   })
   const translationsQuery = trpc.translations.listByChapter.useQuery(
@@ -70,6 +89,9 @@ export function TranslationList({
   )
 
   const translations = translationsQuery.data ?? []
+  const deletingTranslation = translations.find(
+    (translation) => translation.id === deletingTranslationId,
+  )
 
   if (translations.length === 0) {
     return (
@@ -128,7 +150,7 @@ export function TranslationList({
             />
 
             {translation.status === "FAILED" ? (
-              <div>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   variant="outline"
@@ -139,6 +161,33 @@ export function TranslationList({
                   }}
                 >
                   {retryTranslation.isPending ? "Retrying..." : "Retry all"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setDeletingTranslationId(translation.id)
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
+            ) : null}
+
+            {translation.status === "COMPLETED" ? (
+              <div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setDeletingTranslationId(translation.id)
+                  }}
+                >
+                  Delete
                 </Button>
               </div>
             ) : null}
@@ -156,6 +205,44 @@ export function TranslationList({
         translationId={selectedTranslationId}
         chapterId={chapterId}
       />
+
+      <AlertDialog
+        open={deletingTranslationId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeletingTranslationId(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete translation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes the{" "}
+              {deletingTranslation
+                ? `${deletingTranslation.providerLabel} · ${deletingTranslation.modelLabel}`
+                : "selected"}{" "}
+              translation. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteTranslation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteTranslation.isPending || !deletingTranslationId}
+              onClick={() => {
+                if (deletingTranslationId) {
+                  deleteTranslation.mutate({ id: deletingTranslationId })
+                }
+              }}
+            >
+              {deleteTranslation.isPending ? "Deleting..." : "Delete translation"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

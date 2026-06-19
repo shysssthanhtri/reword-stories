@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 
 import {
+  chapterIdInputSchema,
   chapterListInputSchema,
   createChapterInputSchema,
   getDefaultChapterTitle,
@@ -117,5 +118,27 @@ export const chaptersRouter = router({
           },
         })
       })
+    }),
+
+  delete: publicProcedure
+    .input(chapterIdInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const chapter = await ctx.db.chapter.findUnique({
+        where: { id: input.id },
+        select: { id: true },
+      })
+
+      if (!chapter) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Chapter not found",
+        })
+      }
+
+      await ctx.db.chapter.delete({
+        where: { id: input.id },
+      })
+
+      return { id: input.id }
     }),
 })

@@ -8,6 +8,7 @@ import {
 } from "@/components/chapters/chapter-list-pagination"
 import { ChapterListSearch } from "@/components/chapters/chapter-list-search"
 import { ChapterListTable } from "@/components/chapters/chapter-list-table"
+import { DeleteNovelButton } from "@/components/novels/delete-novel-button"
 import { NovelDetailHeader } from "@/components/novels/novel-detail-header"
 import { NovelChaptersEmptyState } from "@/components/novels/novel-list"
 import { Button } from "@/components/ui/button"
@@ -67,10 +68,13 @@ export default async function NovelDetailPage({
         ← Back to novels
       </Button>
 
-      <NovelDetailHeader
-        title={novel.title}
-        sourceLanguage={novel.sourceLanguage}
-      />
+      <div className="flex items-start justify-between gap-4">
+        <NovelDetailHeader
+          title={novel.title}
+          sourceLanguage={novel.sourceLanguage}
+        />
+        <DeleteNovelButton novelId={novelId} novelTitle={novel.title} />
+      </div>
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4">
