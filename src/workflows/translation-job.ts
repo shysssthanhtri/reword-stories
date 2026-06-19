@@ -25,15 +25,24 @@ type JobChunk = {
   status: "PENDING" | "COMPLETED" | "FAILED"
 }
 
-async function translationExists(translationId: string) {
-  "use step"
+class TranslationDeletedError extends Error {
+  constructor() {
+    super("Translation deleted")
+    this.name = "TranslationDeletedError"
+  }
+}
 
-  const translation = await db.translation.findUnique({
-    where: { id: translationId },
-    select: { id: true },
-  })
+function isPrismaRecordNotFound(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2025"
+  )
+}
 
-  return translation !== null
+function isTranslationDeleted(error: unknown) {
+  return error instanceof TranslationDeletedError || isPrismaRecordNotFound(error)
 }
 
 async function markTranslationProcessing(translationId: string) {
@@ -91,10 +100,6 @@ async function updateTranslationProgress(
   translationId: string,
   tokenDelta: number,
 ) {
-  if (!(await translationExists(translationId))) {
-    return
-  }
-
   const [chunks, translation] = await Promise.all([
     db.translationChunk.findMany({
       where: { translationId },
@@ -105,6 +110,10 @@ async function updateTranslationProgress(
       select: { tokenUsage: true },
     }),
   ])
+
+  if (!translation) {
+    throw new TranslationDeletedError()
+  }
 
   const totalCount = chunks.length
   const completedCount = chunks.filter(
@@ -117,7 +126,7 @@ async function updateTranslationProgress(
     where: { id: translationId },
     data: {
       progressPct,
-      tokenUsage: (translation?.tokenUsage ?? 0) + tokenDelta,
+      tokenUsage: (translation.tokenUsage ?? 0) + tokenDelta,
       errorMessage: null,
     },
   })
@@ -137,11 +146,7 @@ async function polishChunkStep(translationId: string, chunkId: string) {
   })
 
   if (!chunk || chunk.translationId !== translationId) {
-    console.warn(TRANSLATION_JOB_LOG_PREFIX, "chunk not found", {
-      translationId,
-      chunkId,
-    })
-    throw new FatalError("Chunk not found")
+    throw new TranslationDeletedError()
   }
 
   if (chunk.status === "COMPLETED") {
@@ -202,6 +207,10 @@ async function polishChunkStep(translationId: string, chunkId: string) {
 
     await updateTranslationProgress(translationId, tokenDelta)
   } catch (error) {
+    if (isTranslationDeleted(error)) {
+      throw error
+    }
+
     const errorMessage = getErrorMessage(error)
 
     console.error(TRANSLATION_JOB_LOG_PREFIX, "chunk failed", {
@@ -225,10 +234,6 @@ async function polishChunkStep(translationId: string, chunkId: string) {
 
 async function finalizeTranslationStep(translationId: string) {
   "use step"
-
-  if (!(await translationExists(translationId))) {
-    return
-  }
 
   const chunks = await db.translationChunk.findMany({
     where: { translationId },
@@ -259,10 +264,6 @@ async function finalizeTranslationStep(translationId: string) {
 
 async function failTranslationStep(translationId: string, errorMessage: string) {
   "use step"
-
-  if (!(await translationExists(translationId))) {
-    return
-  }
 
   const chunks = await db.translationChunk.findMany({
     where: { translationId },
@@ -296,45 +297,39 @@ export async function translationJob(translationId: string) {
 
   console.log(TRANSLATION_JOB_LOG_PREFIX, "job started", { translationId })
 
-  if (!(await translationExists(translationId))) {
-    console.log(TRANSLATION_JOB_LOG_PREFIX, "translation deleted before job started", {
-      translationId,
-    })
-    return
-  }
+  try {
+    await markTranslationProcessing(translationId)
 
-  await markTranslationProcessing(translationId)
+    const chunks = await loadChunksForJob(translationId)
 
-  const chunks = await loadChunksForJob(translationId)
+    for (const chunk of chunks) {
+      if (chunk.status === "COMPLETED") {
+        continue
+      }
 
-  for (const chunk of chunks) {
-    if (!(await translationExists(translationId))) {
+      try {
+        await polishChunkStep(translationId, chunk.id)
+      } catch (error) {
+        if (isTranslationDeleted(error)) {
+          throw error
+        }
+
+        const message =
+          error instanceof Error ? error.message : "Chunk polish failed"
+        await failTranslationStep(translationId, message)
+        return
+      }
+    }
+
+    await finalizeTranslationStep(translationId)
+  } catch (error) {
+    if (isTranslationDeleted(error)) {
       console.log(TRANSLATION_JOB_LOG_PREFIX, "translation deleted during job", {
         translationId,
       })
       return
     }
 
-    if (chunk.status === "COMPLETED") {
-      continue
-    }
-
-    try {
-      await polishChunkStep(translationId, chunk.id)
-    } catch (error) {
-      if (!(await translationExists(translationId))) {
-        console.log(TRANSLATION_JOB_LOG_PREFIX, "translation deleted during job", {
-          translationId,
-        })
-        return
-      }
-
-      const message =
-        error instanceof Error ? error.message : "Chunk polish failed"
-      await failTranslationStep(translationId, message)
-      return
-    }
+    throw error
   }
-
-  await finalizeTranslationStep(translationId)
 }
