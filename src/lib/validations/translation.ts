@@ -46,6 +46,11 @@ export const translationIdInputSchema = z.object({
   id: z.string().min(1),
 })
 
+export const retryChunkInputSchema = z.object({
+  translationId: z.string().min(1),
+  chunkId: z.string().min(1),
+})
+
 export const listByChapterInputSchema = z.object({
   chapterId: z.string().min(1),
 })

@@ -79,6 +79,7 @@ model TranslationChunk {
   rawSlice      String      @map("raw_slice") @db.Text
   polishedSlice String?     @map("polished_slice") @db.Text
   status        ChunkStatus @default(PENDING)
+  errorMessage  String?     @map("error_message")
   tokenCount    Int?        @map("token_count")
   translationId String      @map("translation_id")
   createdAt     DateTime    @default(now()) @map("created_at")

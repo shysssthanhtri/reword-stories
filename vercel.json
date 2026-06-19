@@ -5,7 +5,8 @@
       "experimentalTriggers": [
         {
           "type": "queue/v2beta",
-          "topic": "translation-chunk"
+          "topic": "translation-chunk",
+          "maxConcurrency": 5
         }
       ]
     }

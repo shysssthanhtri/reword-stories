@@ -9,9 +9,17 @@ import {
   getProviderLabel,
   getProviderOptions,
   listByChapterInputSchema,
+  retryChunkInputSchema,
   translationIdInputSchema,
 } from "@/lib/validations/translation"
 import { publicProcedure, router } from "@/server/trpc/init"
+
+const chunkSummarySelect = {
+  id: true,
+  chunkIndex: true,
+  status: true,
+  errorMessage: true,
+} as const
 
 const translationListSelect = {
   id: true,
@@ -24,6 +32,10 @@ const translationListSelect = {
   chapterId: true,
   createdAt: true,
   updatedAt: true,
+  chunks: {
+    orderBy: { chunkIndex: "asc" as const },
+    select: chunkSummarySelect,
+  },
 } as const
 
 function enrichTranslation<T extends { provider: string; modelName: string }>(
@@ -114,6 +126,12 @@ export const translationsRouter = router({
     .query(async ({ ctx, input }) => {
       const translation = await ctx.db.translation.findUnique({
         where: { id: input.id },
+        include: {
+          chunks: {
+            orderBy: { chunkIndex: "asc" },
+            select: chunkSummarySelect,
+          },
+        },
       })
 
       if (!translation) {
@@ -182,6 +200,7 @@ export const translationsRouter = router({
           },
           data: {
             status: "PENDING",
+            errorMessage: null,
           },
         }),
         ctx.db.translation.update({
@@ -197,6 +216,65 @@ export const translationsRouter = router({
 
       return {
         id: translation.id,
+        status: "QUEUED" as const,
+      }
+    }),
+
+  retryChunk: publicProcedure
+    .input(retryChunkInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const chunk = await ctx.db.translationChunk.findUnique({
+        where: { id: input.chunkId },
+        select: {
+          id: true,
+          status: true,
+          translationId: true,
+        },
+      })
+
+      if (!chunk) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Chunk not found",
+        })
+      }
+
+      if (chunk.translationId !== input.translationId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Chunk does not belong to this translation",
+        })
+      }
+
+      if (chunk.status !== "FAILED") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only failed chunks can be retried",
+        })
+      }
+
+      await ctx.db.$transaction([
+        ctx.db.translationChunk.update({
+          where: { id: chunk.id },
+          data: {
+            status: "PENDING",
+            errorMessage: null,
+          },
+        }),
+        ctx.db.translation.update({
+          where: { id: input.translationId },
+          data: {
+            status: "QUEUED",
+            errorMessage: null,
+          },
+        }),
+      ])
+
+      await kickoffTranslation(input.translationId)
+
+      return {
+        translationId: input.translationId,
+        chunkId: chunk.id,
         status: "QUEUED" as const,
       }
     }),

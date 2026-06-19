@@ -61,7 +61,7 @@ All tRPC procedure inputs SHALL be validated with Zod schemas defined in shared 
 
 ### Requirement: Translations router on AppRouter
 
-The root `AppRouter` in `src/server/trpc/router.ts` SHALL register a `translations` feature router exposing `listProviders`, `estimateChunks`, `create`, `getById`, `listByChapter`, and `retry` procedures.
+The root `AppRouter` in `src/server/trpc/router.ts` SHALL register a `translations` feature router exposing `listProviders`, `estimateChunks`, `create`, `getById`, `listByChapter`, `retry`, and `retryChunk` procedures.
 
 All translation procedure inputs SHALL be validated with Zod schemas in `src/lib/validations/translation.ts` (or shared modules). Invalid input SHALL return a tRPC validation error.
 
@@ -74,3 +74,8 @@ All translation procedure inputs SHALL be validated with Zod schemas in `src/lib
 
 - **WHEN** a Client Component calls `trpc.translations.create.useMutation()`
 - **THEN** the request is handled by the translations router and returns a typed response
+
+#### Scenario: Client invokes chunk retry
+
+- **WHEN** a Client Component calls `trpc.translations.retryChunk.useMutation()`
+- **THEN** the request is handled by the translations router and returns a typed response with the re-queued chunk id

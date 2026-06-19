@@ -57,7 +57,7 @@ The Prisma schema SHALL define a `Translation` model with fields: `id`, `provide
 
 ### Requirement: TranslationChunk model stores chunked pipeline state
 
-The Prisma schema SHALL define a `TranslationChunk` model with fields: `id`, `chunkIndex` (integer, 0-based), `rawSlice` (required text), `polishedSlice` (optional text), `status` (enum: `PENDING`, `COMPLETED`, `FAILED`), `tokenCount` (optional integer), `translationId` (foreign key), `createdAt`, and `updatedAt`. Chunks SHALL belong to exactly one `Translation` with cascade delete.
+The Prisma schema SHALL define a `TranslationChunk` model with fields: `id`, `chunkIndex` (integer, 0-based), `rawSlice` (required text), `polishedSlice` (optional text), `status` (enum: `PENDING`, `COMPLETED`, `FAILED`), `errorMessage` (optional string), `tokenCount` (optional integer), `translationId` (foreign key), `createdAt`, and `updatedAt`. Chunks SHALL belong to exactly one `Translation` with cascade delete.
 
 #### Scenario: Chunk unique per translation index
 
@@ -73,6 +73,11 @@ The Prisma schema SHALL define a `TranslationChunk` model with fields: `id`, `ch
 
 - **WHEN** inspecting the `TranslationChunk` model
 - **THEN** `status` uses a `ChunkStatus` enum with values `PENDING`, `COMPLETED`, and `FAILED`
+
+#### Scenario: Chunk error message column
+
+- **WHEN** inspecting the `TranslationChunk` model
+- **THEN** `errorMessage` is an optional `String` mapped to `error_message`
 
 ### Requirement: Prisma client generates with domain types
 

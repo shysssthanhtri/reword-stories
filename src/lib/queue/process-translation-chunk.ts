@@ -96,6 +96,11 @@ async function processTranslationChunk(translationId: string) {
     },
   })
 
+  await db.translationChunk.update({
+    where: { id: pendingChunk.id },
+    data: { errorMessage: null },
+  })
+
   const previousChunk = translation.chunks
     .filter(
       (chunk) =>
@@ -121,6 +126,7 @@ async function processTranslationChunk(translationId: string) {
         polishedSlice: result.polishedText,
         tokenCount: result.tokenUsage?.total ?? null,
         status: "COMPLETED",
+        errorMessage: null,
       },
     })
 
@@ -187,7 +193,10 @@ async function processTranslationChunk(translationId: string) {
     await db.$transaction([
       db.translationChunk.update({
         where: { id: pendingChunk.id },
-        data: { status: "FAILED" },
+        data: {
+          status: "FAILED",
+          errorMessage: getErrorMessage(error),
+        },
       }),
       db.translation.update({
         where: { id: translationId },

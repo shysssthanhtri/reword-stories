@@ -1,33 +1,6 @@
 # Translation CRUD
 
-tRPC procedures, validation, provider+model selection UI, and status polling for translation jobs.
-
-## Requirements
-
-### Requirement: Translation validation schema
-
-The application SHALL define `createTranslationSchema` in `src/lib/validations/translation.ts` with:
-
-- `chapterId` — required string (cuid)
-- `provider` — required string matching a registered provider id from `listProviders()`
-- `modelName` — required string matching a model id in the selected provider's `models` list
-
-The schema SHALL be used by `translations.create` and the create-translation React Hook Form.
-
-#### Scenario: Valid provider and model accepted
-
-- **WHEN** create input uses `provider: "gateway"` and `modelName: "openai/gpt-4o"`
-- **THEN** validation passes
-
-#### Scenario: Unknown provider rejected
-
-- **WHEN** create input uses `provider: "unknown"`
-- **THEN** validation fails before any database write
-
-#### Scenario: Model not in provider catalog rejected
-
-- **WHEN** create input uses a model id not listed in the selected provider's models
-- **THEN** validation fails before any database write
+## MODIFIED Requirements
 
 ### Requirement: Translations tRPC router procedures
 
@@ -80,34 +53,6 @@ The router SHALL be registered on the root `AppRouter`.
 - **WHEN** `translations.listByChapter` is called for a chapter with an in-flight translation
 - **THEN** each translation item includes a `chunks` array ordered by `chunkIndex` with status per chunk
 
-### Requirement: Translate page at /novels/[novelId]/chapters/[chapterId]/translate
-
-The route `src/app/(app)/novels/(novel)/[novelId]/chapters/[chapterId]/translate/page.tsx` SHALL be a React Server Component that verifies the chapter exists and belongs to the route novel, then renders a client create-translation form.
-
-The form SHALL be a Client Component with React Hook Form, shadcn `Field` primitives, and Zod validation. Fields:
-
-- **Provider** — required select populated from `translations.listProviders`
-- **Model** — required select populated from the selected provider's `models`; options SHALL update when provider changes; model selection SHALL reset to a valid default when provider changes
-
-The form SHALL display a pre-flight estimate ("~N chunks") from `translations.estimateChunks`.
-
-On successful submit, the client SHALL call `translations.create` and navigate to the chapter detail page.
-
-#### Scenario: Provider and model selection
-
-- **WHEN** user opens the translate page
-- **THEN** provider and model dropdowns are visible and model options reflect the selected provider
-
-#### Scenario: Successful start redirects to chapter detail
-
-- **WHEN** user selects provider and model and submits
-- **THEN** a translation job is created and the browser navigates to the chapter detail page
-
-#### Scenario: Invalid chapter returns 404
-
-- **WHEN** user navigates to translate URL with a non-existent chapter id
-- **THEN** Next.js renders the not-found page
-
 ### Requirement: Translation status polling on chapter detail
 
 The chapter detail translations section SHALL include a Client Component that polls `translations.listByChapter` every 3 seconds while any translation has status `QUEUED` or `PROCESSING`, and stops polling when all translations are `COMPLETED` or `FAILED`.
@@ -158,7 +103,7 @@ Failed translations SHALL expose a **Retry all** action calling `translations.re
 
 The chapter detail translations section SHALL open a review modal when the user clicks a translation list item. The modal SHALL be a Client Component using shadcn `Dialog`.
 
-When opened, the modal SHALL fetch translation details via `translations.getById` for the selected translation id. The modal header SHALL display provider label, model label, status badge, and started timestamp.
+When opened, the modal SHALL fetch translation details via `translations.getById` for the selected translation id. The modal header SHALL display provider label, model label, overall status badge, and started timestamp.
 
 The modal body SHALL be scrollable and display status-appropriate content:
 
@@ -193,14 +138,3 @@ Retry buttons in the modal and list SHALL NOT open the modal when clicked from t
 
 - **WHEN** user closes the modal via the close button or overlay click
 - **THEN** the modal closes and the translation list remains visible
-
-### Requirement: Route config translate helper
-
-`src/configs/routes/index.ts` SHALL export:
-
-- `chapterTranslate: (novelId: string, chapterId: string) => string` → `/novels/${novelId}/chapters/${chapterId}/translate`
-
-#### Scenario: Route helper produces correct path
-
-- **WHEN** `routes.chapterTranslate("abc", "xyz")` is called
-- **THEN** it returns `/novels/abc/chapters/xyz/translate`

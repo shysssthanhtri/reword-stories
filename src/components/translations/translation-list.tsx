@@ -4,6 +4,7 @@ import type { inferRouterOutputs } from "@trpc/server"
 import Link from "next/link"
 import { useState } from "react"
 
+import { TranslationChunkList } from "@/components/translations/translation-chunk-list"
 import { TranslationReviewModal } from "@/components/translations/translation-review-modal"
 import { TranslationStatusBadge } from "@/components/translations/translation-status-badge"
 import { Button } from "@/components/ui/button"
@@ -34,8 +35,20 @@ export function TranslationList({
   const [selectedTranslationId, setSelectedTranslationId] = useState<
     string | null
   >(null)
+  const [retryingChunkId, setRetryingChunkId] = useState<string | null>(null)
   const utils = trpc.useUtils()
   const retryTranslation = trpc.translations.retry.useMutation({
+    onSuccess: async () => {
+      await utils.translations.listByChapter.invalidate({ chapterId })
+    },
+  })
+  const retryChunk = trpc.translations.retryChunk.useMutation({
+    onMutate: ({ chunkId }) => {
+      setRetryingChunkId(chunkId)
+    },
+    onSettled: () => {
+      setRetryingChunkId(null)
+    },
     onSuccess: async () => {
       await utils.translations.listByChapter.invalidate({ chapterId })
     },
@@ -103,11 +116,16 @@ export function TranslationList({
               />
             </div>
 
-            {translation.status === "FAILED" && translation.errorMessage ? (
-              <p className="text-sm text-destructive">
-                {translation.errorMessage}
-              </p>
-            ) : null}
+            <TranslationChunkList
+              chunks={translation.chunks}
+              retryingChunkId={retryingChunkId}
+              onRetryChunk={(chunkId) => {
+                retryChunk.mutate({
+                  translationId: translation.id,
+                  chunkId,
+                })
+              }}
+            />
 
             {translation.status === "FAILED" ? (
               <div>
@@ -120,7 +138,7 @@ export function TranslationList({
                     retryTranslation.mutate({ id: translation.id })
                   }}
                 >
-                  {retryTranslation.isPending ? "Retrying..." : "Retry"}
+                  {retryTranslation.isPending ? "Retrying..." : "Retry all"}
                 </Button>
               </div>
             ) : null}
@@ -136,6 +154,7 @@ export function TranslationList({
           }
         }}
         translationId={selectedTranslationId}
+        chapterId={chapterId}
       />
     </>
   )
