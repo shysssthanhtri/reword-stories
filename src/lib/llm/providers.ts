@@ -1,7 +1,11 @@
 import { gatewayProvider } from "@/lib/llm/gateway-provider"
+import { modalVietnameseProvider } from "@/lib/llm/modal-vietnamese-provider"
 import type { TranslationProvider } from "@/lib/llm/types"
 
-const providers = [gatewayProvider] as const satisfies readonly TranslationProvider[]
+const providers = [
+  gatewayProvider,
+  modalVietnameseProvider,
+] as const satisfies readonly TranslationProvider[]
 
 const providerMap = new Map<string, TranslationProvider>(
   providers.map((provider) => [provider.id, provider]),

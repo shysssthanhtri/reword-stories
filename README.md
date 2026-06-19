@@ -181,3 +181,35 @@ In the Vercel dashboard: **Project → Observability → Workflows** for run his
 ### Local development
 
 Workflow jobs require **`vercel dev`** or a **Vercel preview deployment** with `vercel link` and `vercel env pull`. Plain `next dev` does not execute durable workflow steps end-to-end. Optionally run `npx workflow web` to inspect local runs.
+
+## Vietnamese correction provider (Modal)
+
+The **Vietnamese Correction (Modal)** provider runs [bmd1905/vietnamese-correction-v2](https://huggingface.co/bmd1905/vietnamese-correction-v2) on [Modal](https://modal.com/) GPU workers. The Next.js app calls the deployed Modal HTTPS endpoint; inference does not run on Vercel.
+
+### GitHub secrets
+
+Add these repository secrets before running the deploy workflow:
+
+| Secret | Purpose |
+| --- | --- |
+| `MODAL_TOKEN_ID` | Modal CI authentication |
+| `MODAL_TOKEN_SECRET` | Modal CI authentication |
+| `HF_TOKEN` | Hugging Face model download on Modal |
+| `MODAL_VIETNAMESE_API_KEY` | Shared API key for Modal endpoint and Vercel app |
+
+### Deploy workflow
+
+Run **Deploy Vietnamese Correction to Modal** (`.github/workflows/deploy-modal-vietnamese-correction.yml`) from GitHub Actions. Each run:
+
+1. Syncs `HF_TOKEN` → Modal secret `hf-token` (`--force`)
+2. Syncs `MODAL_VIETNAMESE_API_KEY` → Modal secret `modal-vietnamese-api-key` (`--force`)
+3. Runs `modal deploy modal/vietnamese_correction.py`
+
+After deploy, copy the Modal HTTPS URL into Vercel (and local `.env`) as `MODAL_VIETNAMESE_API_URL`. Set the same `MODAL_VIETNAMESE_API_KEY` on Vercel.
+
+### Local Modal smoke test
+
+```bash
+pip install modal
+modal run modal/vietnamese_correction.py --text "côn viec kin doanh thì rất kho khan"
+```

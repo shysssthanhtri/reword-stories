@@ -9,6 +9,8 @@ export const env = createEnv({
     OPENAI_API_KEY: z.string().min(1).optional(),
     GEMINI_API_KEY: z.string().min(1).optional(),
     DEEPL_API_KEY: z.string().min(1).optional(),
+    MODAL_VIETNAMESE_API_URL: z.url().optional(),
+    MODAL_VIETNAMESE_API_KEY: z.string().min(1).optional(),
     CHUNK_POLISH_RATE_LIMIT: z.coerce.number().int().positive().default(3),
     CHUNK_POLISH_RATE_LIMIT_WINDOW: z
       .string()

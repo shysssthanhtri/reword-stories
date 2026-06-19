@@ -1,0 +1,40 @@
+name: Deploy Vietnamese Correction to Modal
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Modal
+        run: pip install modal
+
+      - name: Sync hf-token secret
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          modal secret create hf-token \
+            HF_TOKEN="$HF_TOKEN" \
+            --force
+
+      - name: Sync modal-vietnamese-api-key secret
+        env:
+          MODAL_VIETNAMESE_API_KEY: ${{ secrets.MODAL_VIETNAMESE_API_KEY }}
+        run: |
+          modal secret create modal-vietnamese-api-key \
+            MODAL_VIETNAMESE_API_KEY="$MODAL_VIETNAMESE_API_KEY" \
+            --force
+
+      - name: Deploy Vietnamese correction app
+        run: modal deploy modal/vietnamese_correction.py

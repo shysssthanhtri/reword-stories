@@ -19,3 +19,16 @@ export const GATEWAY_MODELS: ModelOption[] = [
 ]
 
 export const DEFAULT_GATEWAY_MODEL_ID = "google/gemini-2.5-flash-lite"
+
+export const MODAL_VIETNAMESE_PROVIDER_ID = "modal-vietnamese"
+
+export const MODAL_VIETNAMESE_MODELS: ModelOption[] = [
+  {
+    id: "bmd1905/vietnamese-correction-v2",
+    label: "Vietnamese Correction v2",
+    isFree: true,
+  },
+]
+
+export const DEFAULT_MODAL_VIETNAMESE_MODEL_ID =
+  "bmd1905/vietnamese-correction-v2"

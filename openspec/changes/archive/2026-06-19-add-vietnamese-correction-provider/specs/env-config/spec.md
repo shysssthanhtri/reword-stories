@@ -1,8 +1,6 @@
 # Env Config
 
-Type-safe environment variable validation via t3-env for server-side configuration.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Type-safe env via t3-env
 
