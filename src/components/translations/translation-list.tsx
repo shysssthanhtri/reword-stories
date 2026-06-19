@@ -75,24 +75,7 @@ export function TranslationList({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {translations.length} translation
-          {translations.length === 1 ? "" : "s"}
-        </p>
-        <Button
-          size="sm"
-          nativeButton={false}
-          render={
-            <Link href={routes.chapterTranslate(novelId, chapterId)} />
-          }
-        >
-          New translation
-        </Button>
-      </div>
-
-      <ul className="flex flex-col gap-3">
+    <ul className="flex flex-col gap-3">
         {translations.map((translation) => (
           <li
             key={translation.id}
@@ -135,7 +118,6 @@ export function TranslationList({
             ) : null}
           </li>
         ))}
-      </ul>
-    </div>
+    </ul>
   )
 }

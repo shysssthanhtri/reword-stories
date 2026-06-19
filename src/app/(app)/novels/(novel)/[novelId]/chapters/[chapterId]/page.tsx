@@ -67,16 +67,26 @@ export default async function ChapterDetailPage({
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-medium">Translations</h2>
-          <Button
-            size="sm"
-            nativeButton={false}
-            render={
-              <Link href={routes.chapterTranslate(novelId, chapterId)} />
-            }
-          >
-            New translation
-          </Button>
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-medium">Translations</h2>
+            {serializedTranslations.length > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {serializedTranslations.length} translation
+                {serializedTranslations.length === 1 ? "" : "s"}
+              </p>
+            ) : null}
+          </div>
+          {serializedTranslations.length > 0 ? (
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={
+                <Link href={routes.chapterTranslate(novelId, chapterId)} />
+              }
+            >
+              New translation
+            </Button>
+          ) : null}
         </div>
         <TranslationList
           novelId={novelId}
