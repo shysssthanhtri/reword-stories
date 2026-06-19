@@ -112,88 +112,72 @@ export function TranslationList({
             translation.status === "FAILED"
 
           return (
-          <li
-            key={translation.id}
-            className={cn(
-              "flex flex-col gap-2 rounded-lg border p-4",
-              isClickable &&
+            <li
+              key={translation.id}
+              className={cn(
+                "flex flex-col gap-2 rounded-lg border p-4",
+                isClickable &&
                 "cursor-pointer transition-colors hover:bg-muted/50",
-            )}
-            onClick={
-              isClickable
-                ? () => setSelectedTranslationId(translation.id)
-                : undefined
-            }
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-col gap-1">
-                <p className="font-medium">
-                  {translation.providerLabel} · {translation.modelLabel}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Started {new Date(translation.createdAt).toLocaleString()}
-                </p>
+              )}
+              onClick={
+                isClickable
+                  ? () => setSelectedTranslationId(translation.id)
+                  : undefined
+              }
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-col gap-1">
+                  <p className="font-medium">
+                    {translation.providerLabel} · {translation.modelLabel}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Started {new Date(translation.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <TranslationStatusBadge
+                  status={translation.status}
+                  progressPct={translation.progressPct}
+                />
               </div>
-              <TranslationStatusBadge
+
+              <TranslationProgress
                 status={translation.status}
                 progressPct={translation.progressPct}
               />
-            </div>
 
-            <TranslationProgress
-              status={translation.status}
-              progressPct={translation.progressPct}
-            />
+              {translation.status === "FAILED" && translation.errorMessage ? (
+                <p className="text-sm text-destructive">
+                  {translation.errorMessage}
+                </p>
+              ) : null}
 
-            {translation.status === "FAILED" && translation.errorMessage ? (
-              <p className="text-sm text-destructive">
-                {translation.errorMessage}
-              </p>
-            ) : null}
-
-            {translation.status === "FAILED" ? (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={retryTranslation.isPending}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    retryTranslation.mutate({ id: translation.id })
-                  }}
-                >
-                  {retryTranslation.isPending ? "Retrying..." : "Retry all"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-destructive"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setDeletingTranslationId(translation.id)
-                  }}
-                >
-                  Delete
-                </Button>
-              </div>
-            ) : null}
-
-            {translation.status === "COMPLETED" ? (
-              <div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-destructive"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setDeletingTranslationId(translation.id)
-                  }}
-                >
-                  Delete
-                </Button>
-              </div>
-            ) : null}
-          </li>
+              {translation.status !== "PROCESSING" ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={retryTranslation.isPending}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      retryTranslation.mutate({ id: translation.id })
+                    }}
+                  >
+                    {retryTranslation.isPending ? "Retrying..." : "Retry all"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setDeletingTranslationId(translation.id)
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              ) : null}
+            </li>
           )
         })}
       </ul>

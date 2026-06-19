@@ -35,18 +35,15 @@ function ReviewBody({
   onRetryChunk: (chunkId: string) => void
   retryingChunkId: string | null
 }) {
-  if (translation.status === "COMPLETED") {
-    return (
-      <div className="max-h-[60vh] overflow-y-auto rounded-md border bg-muted/30 p-4">
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">
-          {translation.polishedContent ?? "No polished content available."}
-        </p>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-3">
+      {translation.status === "COMPLETED" ? (
+        <div className="max-h-[40vh] overflow-y-auto rounded-md border bg-muted/30 p-4">
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">
+            {translation.polishedContent ?? "No polished content available."}
+          </p>
+        </div>
+      ) : null}
       {translation.status === "QUEUED" ? (
         <p className="text-sm text-muted-foreground">
           Translation is queued and has not started yet.
@@ -64,7 +61,7 @@ function ReviewBody({
         chunks={translation.chunks}
         retryingChunkId={retryingChunkId}
         onRetryChunk={onRetryChunk}
-        collapsible={false}
+        collapsible={translation.status === "COMPLETED"}
       />
     </div>
   )

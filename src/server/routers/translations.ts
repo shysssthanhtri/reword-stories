@@ -187,22 +187,30 @@ export const translationsRouter = router({
         })
       }
 
-      if (translation.status !== "FAILED") {
+      if (
+        translation.status === "PROCESSING") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Only failed translations can be retried",
+          message: "Only failed or completed translations can be retried",
         })
       }
 
+      const resetAllChunks = translation.status === "COMPLETED"
+
       await ctx.db.$transaction([
         ctx.db.translationChunk.updateMany({
-          where: {
-            translationId: translation.id,
-            status: "FAILED",
-          },
+          where: resetAllChunks
+            ? { translationId: translation.id }
+            : {
+              translationId: translation.id,
+              status: "FAILED",
+            },
           data: {
             status: "PENDING",
             errorMessage: null,
+            ...(resetAllChunks
+              ? { polishedSlice: null, tokenCount: null }
+              : {}),
           },
         }),
         ctx.db.translation.update({
@@ -210,6 +218,9 @@ export const translationsRouter = router({
           data: {
             status: "QUEUED",
             errorMessage: null,
+            ...(resetAllChunks
+              ? { polishedContent: null, progressPct: 0, tokenUsage: 0 }
+              : {}),
           },
         }),
       ])
