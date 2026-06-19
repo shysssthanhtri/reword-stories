@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { getProvider, listProviders } from "@/lib/llm/providers"
+import { getProvider, listProviders } from "@/lib/llm/provider-registry"
 
 export const createTranslationSchema = z
   .object({
