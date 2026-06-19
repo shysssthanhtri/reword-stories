@@ -7,6 +7,40 @@ export const createNovelSchema = z.object({
   sourceLanguage: sourceLanguageSchema,
 })
 
+export const novelListSortBySchema = z.enum(["createdAt", "chapterCount"])
+export const novelListSortDirSchema = z.enum(["asc", "desc"])
+
+export const novelListInputSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(10),
+  q: z
+    .string()
+    .trim()
+    .transform((value) => (value.length > 0 ? value : undefined))
+    .optional(),
+  sortBy: novelListSortBySchema.default("createdAt"),
+  sortDir: novelListSortDirSchema.default("desc"),
+})
+
+export type NovelListInput = z.infer<typeof novelListInputSchema>
+
+export function parseNovelListSearchParams(
+  searchParams: Record<string, string | string[] | undefined>
+): NovelListInput {
+  const get = (key: string) => {
+    const value = searchParams[key]
+    return Array.isArray(value) ? value[0] : value
+  }
+
+  return novelListInputSchema.parse({
+    page: get("page"),
+    pageSize: get("pageSize"),
+    q: get("q"),
+    sortBy: get("sortBy"),
+    sortDir: get("sortDir"),
+  })
+}
+
 export const SOURCE_LANGUAGES = [
   { value: "ko", label: "Korean" },
   { value: "ja", label: "Japanese" },

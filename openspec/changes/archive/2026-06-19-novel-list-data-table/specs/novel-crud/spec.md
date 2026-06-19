@@ -1,22 +1,8 @@
 # Novel CRUD
 
-Novel library, create form, detail pages, and loading skeletons for the paste flow entry point.
+Delta spec for paginated novels library data table with search and sort.
 
-## Requirements
-
-### Requirement: Novel source language taxonomy
-
-The application SHALL accept `sourceLanguage` as one of: `ko`, `ja`, `zh`, `vi`, `other`. Labels displayed in the UI SHALL be **Korean**, **Japanese**, **Chinese**, **Vietnamese**, and **Other** respectively. Validation SHALL be enforced in shared Zod schemas used by both tRPC and forms.
-
-#### Scenario: Valid source language persisted
-
-- **WHEN** user creates a novel with source language `ja`
-- **THEN** the `Novel.sourceLanguage` column stores `ja`
-
-#### Scenario: Invalid source language rejected
-
-- **WHEN** a create request includes `sourceLanguage: "fr"`
-- **THEN** validation fails before any database write
+## MODIFIED Requirements
 
 ### Requirement: Novels tRPC router procedures
 
@@ -109,66 +95,6 @@ When novels exist or a search query is applied, the page SHALL render a title se
 - **WHEN** user searches for a title that matches no novels
 - **THEN** a no-results message is shown and the search input retains the query
 
-### Requirement: Create novel page at /novels/new
-
-The route `src/app/(app)/novels/(novel)/new/page.tsx` SHALL render a create-novel form. The form SHALL be a Client Component using React Hook Form, shadcn `Field` primitives, Zod validation, and a source-language select. Fields: **Title** (text input) and **Source language** (select).
-
-On successful submit, the client SHALL call `novels.create` via tRPC and navigate to `/novels/[id]`. Validation errors SHALL display inline next to fields.
-
-#### Scenario: Successful create redirects to detail
-
-- **WHEN** user submits a valid title and source language
-- **THEN** a novel is created and the browser navigates to `/novels/[novelId]`
-
-#### Scenario: Inline validation on empty title
-
-- **WHEN** user submits with an empty title
-- **THEN** an inline error appears on the title field and no navigation occurs
-
-### Requirement: Novel detail page at /novels/[novelId]
-
-The route `src/app/(app)/novels/(novel)/[novelId]/page.tsx` SHALL be a React Server Component that server-fetches novel metadata and chapters. It SHALL display the novel title, source language label, and a **Chapters** section with an **Add Chapter** button linking to `/novels/[novelId]/chapters/new`.
-
-When chapters exist, each chapter row SHALL link to `/novels/[novelId]/chapters/[chapterId]` and display the chapter title or fallback `Chapter {sortOrder + 1}`.
-
-When no chapters exist, an empty state SHALL prompt the user to add a chapter with a link/button to `/novels/[novelId]/chapters/new`.
-
-Unknown `novelId` SHALL render a not-found response (`notFound()`).
-
-#### Scenario: Detail shows novel metadata
-
-- **WHEN** user navigates to `/novels/[validId]`
-- **THEN** the page shows the novel title and human-readable source language
-
-#### Scenario: Detail shows add chapter button
-
-- **WHEN** user navigates to a valid novel detail page
-- **THEN** an **Add Chapter** button links to `/novels/[novelId]/chapters/new`
-
-#### Scenario: Detail links chapter rows
-
-- **WHEN** user navigates to a novel with chapters
-- **THEN** each chapter row links to its chapter detail page
-
-#### Scenario: Detail shows actionable empty chapters state
-
-- **WHEN** user navigates to a novel with zero chapters
-- **THEN** the chapters section shows an empty state with a link to add a chapter
-
-#### Scenario: Invalid novel id returns 404
-
-- **WHEN** user navigates to `/novels/nonexistent-id`
-- **THEN** Next.js renders the not-found page
-
-### Requirement: Create novel form uses React Hook Form
-
-The create-novel form SHALL use React Hook Form per the project form standard (`app-scaffold`): `useForm` with `zodResolver`, `Controller` per field, and shadcn `Field`, `FieldLabel`, `FieldError`, and `Input` / `Select` components.
-
-#### Scenario: Form matches shadcn RHF integration
-
-- **WHEN** inspecting `src/components/novels/create-novel-form.tsx` (or equivalent)
-- **THEN** it uses `react-hook-form`, `@hookform/resolvers/zod`, and shadcn `Field` components
-
 ### Requirement: Novel list loading skeleton at /novels
 
 The route segment `src/app/(app)/novels/loading.tsx` SHALL render a list-specific skeleton while the library page loads. The skeleton SHALL use shadcn `Skeleton` via a dedicated `NovelListSkeleton` component and mimic the table layout: page heading, **New Novel** action placeholder, search input placeholder, table header row, multiple table row placeholders, and pagination control placeholders.
@@ -182,22 +108,3 @@ The route segment `src/app/(app)/novels/loading.tsx` SHALL render a list-specifi
 
 - **WHEN** user navigates to `/novels` and the server component is pending
 - **THEN** the list skeleton appears inside the app shell until the library page renders
-
-### Requirement: Shared loading skeleton for new and detail routes
-
-The routes `/novels/new` and `/novels/[novelId]` SHALL share a single loading boundary via a `(novel)` route group at `src/app/(app)/novels/(novel)/loading.tsx`. That file SHALL render a shared `NovelPageSkeleton` component that mimics the single-column page layout: back-link/header placeholder, title block, and content card placeholders. The detail skeleton MAY include an extra chapters-section block; the new-page skeleton MAY omit it or use the same layout (acceptable either way if visually consistent).
-
-#### Scenario: New and detail share one loading file
-
-- **WHEN** inspecting the novels route tree
-- **THEN** `new/page.tsx` and `[novelId]/page.tsx` live under `novels/(novel)/` and both inherit `novels/(novel)/loading.tsx`
-
-#### Scenario: Shared skeleton component exists
-
-- **WHEN** inspecting `src/components/novels/skeletons/novel-page-skeleton.tsx`
-- **THEN** it is imported by `novels/(novel)/loading.tsx` and uses shadcn `Skeleton` primitives
-
-#### Scenario: List skeleton is not shown for new or detail navigation
-
-- **WHEN** user navigates to `/novels/new` or `/novels/[novelId]`
-- **THEN** `NovelPageSkeleton` is shown (not `NovelListSkeleton`) while the page loads
