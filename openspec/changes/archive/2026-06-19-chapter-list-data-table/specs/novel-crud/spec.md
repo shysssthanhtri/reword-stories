@@ -1,22 +1,8 @@
 # Novel CRUD
 
-Novel library, create form, detail pages, and loading skeletons for the paste flow entry point.
+Delta spec for paginated chapters data table on novel detail page.
 
-## Requirements
-
-### Requirement: Novel source language taxonomy
-
-The application SHALL accept `sourceLanguage` as one of: `ko`, `ja`, `zh`, `vi`, `other`. Labels displayed in the UI SHALL be **Korean**, **Japanese**, **Chinese**, **Vietnamese**, and **Other** respectively. Validation SHALL be enforced in shared Zod schemas used by both tRPC and forms.
-
-#### Scenario: Valid source language persisted
-
-- **WHEN** user creates a novel with source language `ja`
-- **THEN** the `Novel.sourceLanguage` column stores `ja`
-
-#### Scenario: Invalid source language rejected
-
-- **WHEN** a create request includes `sourceLanguage: "fr"`
-- **THEN** validation fails before any database write
+## MODIFIED Requirements
 
 ### Requirement: Novels tRPC router procedures
 
@@ -73,58 +59,6 @@ Title SHALL be required, trimmed, and between 1 and 200 characters.
 - **WHEN** `novels.create` is called with `{ title: "Solo Leveling", sourceLanguage: "ko" }`
 - **THEN** a `Novel` row is inserted and returned with a generated `id`
 
-### Requirement: Novels library page at /novels
-
-The route `src/app/(app)/novels/page.tsx` SHALL be a React Server Component that server-fetches the paginated novel list using URL search params (`page`, optional `pageSize`, optional `q`, optional `sortBy`, optional `sortDir`) and renders a library view inside the app shell. The page SHALL include a **New Novel** link/button to `/novels/new`. When no novels exist and no search query is applied, an empty state SHALL prompt the user to create one.
-
-When novels exist or a search query is applied, the page SHALL render a title search input and a data table (not cards) with columns for **Title**, **Source language**, **Chapters**, and **Created**. Each title cell SHALL link to `/novels/[id]`. The **Chapters** and **Created** column headers SHALL be sortable and update URL search params on click. Pagination controls SHALL appear below the table and navigate via URL search params so page changes are server-rendered. When a search query matches no novels, a no-results message SHALL be shown while preserving the search input value.
-
-#### Scenario: Library lists existing novels in a table
-
-- **WHEN** user navigates to `/novels` with novels in the database
-- **THEN** novels appear in a table with title, source language, chapter count, and created date; each title links to `/novels/[id]`
-
-#### Scenario: Empty library state
-
-- **WHEN** user navigates to `/novels` with zero novels and no search query
-- **THEN** an empty state message and link to create a novel are shown (no table or pagination)
-
-#### Scenario: Pagination via URL
-
-- **WHEN** user navigates to `/novels?page=2`
-- **THEN** the server fetches page 2 and the table shows the second page of results with pagination controls reflecting the current page
-
-#### Scenario: Search by title via URL
-
-- **WHEN** user navigates to `/novels?q=solo`
-- **THEN** the server fetches novels whose titles match "solo" case-insensitively and the search input shows the query
-
-#### Scenario: Sort by chapters via URL
-
-- **WHEN** user navigates to `/novels?sortBy=chapterCount&sortDir=asc`
-- **THEN** the table rows are ordered by chapter count ascending and the **Chapters** header reflects the active sort
-
-#### Scenario: No search results
-
-- **WHEN** user searches for a title that matches no novels
-- **THEN** a no-results message is shown and the search input retains the query
-
-### Requirement: Create novel page at /novels/new
-
-The route `src/app/(app)/novels/(novel)/new/page.tsx` SHALL render a create-novel form. The form SHALL be a Client Component using React Hook Form, shadcn `Field` primitives, Zod validation, and a source-language select. Fields: **Title** (text input) and **Source language** (select).
-
-On successful submit, the client SHALL call `novels.create` via tRPC and navigate to `/novels/[id]`. Validation errors SHALL display inline next to fields.
-
-#### Scenario: Successful create redirects to detail
-
-- **WHEN** user submits a valid title and source language
-- **THEN** a novel is created and the browser navigates to `/novels/[novelId]`
-
-#### Scenario: Inline validation on empty title
-
-- **WHEN** user submits with an empty title
-- **THEN** an inline error appears on the title field and no navigation occurs
-
 ### Requirement: Novel detail page at /novels/[novelId]
 
 The route `src/app/(app)/novels/(novel)/[novelId]/page.tsx` SHALL be a React Server Component that server-fetches novel metadata via `novels.getById` and a paginated chapter list via `chapters.list` using URL search params (`page`, optional `pageSize`, optional `q`, optional `sortBy`, optional `sortDir`). It SHALL display the novel title, source language label, and a **Chapters** section with an **Add Chapter** button linking to `/novels/[novelId]/chapters/new`.
@@ -179,29 +113,6 @@ Unknown `novelId` SHALL render a not-found response (`notFound()`).
 
 - **WHEN** user navigates to `/novels/nonexistent-id`
 - **THEN** Next.js renders the not-found page
-
-### Requirement: Create novel form uses React Hook Form
-
-The create-novel form SHALL use React Hook Form per the project form standard (`app-scaffold`): `useForm` with `zodResolver`, `Controller` per field, and shadcn `Field`, `FieldLabel`, `FieldError`, and `Input` / `Select` components.
-
-#### Scenario: Form matches shadcn RHF integration
-
-- **WHEN** inspecting `src/components/novels/create-novel-form.tsx` (or equivalent)
-- **THEN** it uses `react-hook-form`, `@hookform/resolvers/zod`, and shadcn `Field` components
-
-### Requirement: Novel list loading skeleton at /novels
-
-The route segment `src/app/(app)/novels/loading.tsx` SHALL render a list-specific skeleton while the library page loads. The skeleton SHALL use shadcn `Skeleton` via a dedicated `NovelListSkeleton` component and mimic the table layout: page heading, **New Novel** action placeholder, search input placeholder, table header row, multiple table row placeholders, and pagination control placeholders.
-
-#### Scenario: List route has its own loading boundary
-
-- **WHEN** inspecting `src/app/(app)/novels/loading.tsx`
-- **THEN** it renders `NovelListSkeleton` and does not reuse the new/detail skeleton
-
-#### Scenario: List skeleton visible during navigation
-
-- **WHEN** user navigates to `/novels` and the server component is pending
-- **THEN** the list skeleton appears inside the app shell until the library page renders
 
 ### Requirement: Shared loading skeleton for new and detail routes
 

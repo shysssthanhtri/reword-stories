@@ -61,11 +61,6 @@ export const novelsRouter = router({
     .query(async ({ ctx, input }) => {
       const novel = await ctx.db.novel.findUnique({
         where: { id: input.id },
-        include: {
-          chapters: {
-            orderBy: { sortOrder: "asc" },
-          },
-        },
       })
 
       if (!novel) {
