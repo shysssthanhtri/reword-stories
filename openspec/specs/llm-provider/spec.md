@@ -120,29 +120,28 @@ The application SHALL register a `modal-vietnamese` provider in `src/lib/llm/pro
 
 The provider's `polish()` SHALL:
 
-- POST to `MODAL_VIETNAMESE_API_URL` (typed env) at path `/correct` with JSON `{ text }`
-- Send header `X-Api-Key: MODAL_VIETNAMESE_API_KEY`
-- When `contextOverlap` is provided, prepend it to `text` separated by a newline before sending (continuity without LLM prompts)
+- Delegate HTTP calls to `correctText()` from `src/lib/modal-vietnamese` (typed Modal client) instead of inline `fetch`
+- Build request text via `buildCorrectionInput(text, contextOverlap)` before calling `correctText`
 - Return `{ polishedText: corrected_text }` from the Modal response
 - Omit `tokenUsage` (the correction model does not expose token counts)
 - NOT invoke AI Gateway or post-edit prompt builders
 
-If `MODAL_VIETNAMESE_API_URL` or `MODAL_VIETNAMESE_API_KEY` is missing when `polish()` runs, the provider SHALL throw a clear configuration error.
+If `MODAL_VIETNAMESE_API_URL` or `MODAL_VIETNAMESE_API_KEY` is missing when `polish()` runs, the provider SHALL throw a clear configuration error before calling the client.
 
 #### Scenario: Registry returns modal-vietnamese provider
 
 - **WHEN** `getProvider("modal-vietnamese")` is called
 - **THEN** it returns the Modal-backed Vietnamese correction provider
 
-#### Scenario: Polish via Modal HTTP endpoint
+#### Scenario: Polish via Modal client
 
 - **WHEN** `polish()` is called with valid env and Vietnamese text
-- **THEN** the provider POSTs to the Modal `/correct` endpoint and returns corrected text in `polishedText`
+- **THEN** the provider calls `correctText()` and returns corrected text in `polishedText`
 
 #### Scenario: Overlap prepended to input text
 
 - **WHEN** `polish()` is called with `contextOverlap: "Đoạn trước."` and `text: "Đoạn sau."`
-- **THEN** the Modal request body text is `"Đoạn trước.\nĐoạn sau."`
+- **THEN** `correctText` receives text built as `"Đoạn trước.\nĐoạn sau."`
 
 #### Scenario: Missing Modal config throws
 
