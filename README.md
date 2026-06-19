@@ -207,6 +207,19 @@ Run **Deploy Vietnamese Correction to Modal** (`.github/workflows/deploy-modal-v
 
 After deploy, copy the Modal HTTPS URL into Vercel (and local `.env`) as `MODAL_VIETNAMESE_API_URL`. Set the same `MODAL_VIETNAMESE_API_KEY` on Vercel.
 
+### Typed API client
+
+The Next.js app calls Modal through `src/lib/modal-vietnamese/` (`openapi-fetch` + generated types from `openapi/vietnamese-correction.openapi.json`). Regenerate types after the Modal API changes:
+
+```bash
+# Optional: refresh snapshot from deployed endpoint
+curl -H "x-api-key: $MODAL_VIETNAMESE_API_KEY" \
+  "$MODAL_VIETNAMESE_API_URL/openapi.json" \
+  -o openapi/vietnamese-correction.openapi.json
+
+pnpm generate:api
+```
+
 ### Local Modal smoke test
 
 ```bash

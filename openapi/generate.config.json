@@ -1,0 +1,6 @@
+[
+  {
+    "input": "openapi/vietnamese-correction.openapi.json",
+    "output": "src/lib/modal-vietnamese/schema.d.ts"
+  }
+]
