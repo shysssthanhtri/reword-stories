@@ -328,23 +328,13 @@ export const translationsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const translation = await ctx.db.translation.findUnique({
         where: { id: input.id },
-        select: { id: true, status: true },
+        select: { id: true },
       })
 
       if (!translation) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Translation not found",
-        })
-      }
-
-      if (
-        translation.status === "QUEUED" ||
-        translation.status === "PROCESSING"
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "In-flight translations cannot be deleted",
         })
       }
 

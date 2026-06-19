@@ -1,4 +1,4 @@
-import { FatalError, sleep } from "workflow"
+import { FatalError } from "workflow"
 
 import { assemblePolishedContent } from "@/lib/chunking/assemble-chunks"
 import { extractOverlapContext } from "@/lib/chunking/overlap-context"
@@ -25,18 +25,15 @@ type JobChunk = {
   status: "PENDING" | "COMPLETED" | "FAILED"
 }
 
-async function isGlobalJobSlotAvailable(translationId: string) {
+async function translationExists(translationId: string) {
   "use step"
 
-  const otherProcessing = await db.translation.findFirst({
-    where: {
-      status: "PROCESSING",
-      id: { not: translationId },
-    },
+  const translation = await db.translation.findUnique({
+    where: { id: translationId },
     select: { id: true },
   })
 
-  return !otherProcessing
+  return translation !== null
 }
 
 async function markTranslationProcessing(translationId: string) {
@@ -94,6 +91,10 @@ async function updateTranslationProgress(
   translationId: string,
   tokenDelta: number,
 ) {
+  if (!(await translationExists(translationId))) {
+    return
+  }
+
   const [chunks, translation] = await Promise.all([
     db.translationChunk.findMany({
       where: { translationId },
@@ -225,6 +226,10 @@ async function polishChunkStep(translationId: string, chunkId: string) {
 async function finalizeTranslationStep(translationId: string) {
   "use step"
 
+  if (!(await translationExists(translationId))) {
+    return
+  }
+
   const chunks = await db.translationChunk.findMany({
     where: { translationId },
     orderBy: { chunkIndex: "asc" },
@@ -254,6 +259,10 @@ async function finalizeTranslationStep(translationId: string) {
 
 async function failTranslationStep(translationId: string, errorMessage: string) {
   "use step"
+
+  if (!(await translationExists(translationId))) {
+    return
+  }
 
   const chunks = await db.translationChunk.findMany({
     where: { translationId },
@@ -287,10 +296,11 @@ export async function translationJob(translationId: string) {
 
   console.log(TRANSLATION_JOB_LOG_PREFIX, "job started", { translationId })
 
-  let slotAvailable = await isGlobalJobSlotAvailable(translationId)
-  while (!slotAvailable) {
-    await sleep("10s")
-    slotAvailable = await isGlobalJobSlotAvailable(translationId)
+  if (!(await translationExists(translationId))) {
+    console.log(TRANSLATION_JOB_LOG_PREFIX, "translation deleted before job started", {
+      translationId,
+    })
+    return
   }
 
   await markTranslationProcessing(translationId)
@@ -298,6 +308,13 @@ export async function translationJob(translationId: string) {
   const chunks = await loadChunksForJob(translationId)
 
   for (const chunk of chunks) {
+    if (!(await translationExists(translationId))) {
+      console.log(TRANSLATION_JOB_LOG_PREFIX, "translation deleted during job", {
+        translationId,
+      })
+      return
+    }
+
     if (chunk.status === "COMPLETED") {
       continue
     }
@@ -305,6 +322,13 @@ export async function translationJob(translationId: string) {
     try {
       await polishChunkStep(translationId, chunk.id)
     } catch (error) {
+      if (!(await translationExists(translationId))) {
+        console.log(TRANSLATION_JOB_LOG_PREFIX, "translation deleted during job", {
+          translationId,
+        })
+        return
+      }
+
       const message =
         error instanceof Error ? error.message : "Chunk polish failed"
       await failTranslationStep(translationId, message)

@@ -151,8 +151,8 @@ export function TranslationList({
                 </p>
               ) : null}
 
-              {translation.status !== "PROCESSING" ? (
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
+                {translation.status !== "PROCESSING" ? (
                   <Button
                     size="sm"
                     variant="outline"
@@ -164,19 +164,19 @@ export function TranslationList({
                   >
                     {retryTranslation.isPending ? "Retrying..." : "Retry all"}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-destructive"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      setDeletingTranslationId(translation.id)
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              ) : null}
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setDeletingTranslationId(translation.id)
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
             </li>
           )
         })}
@@ -210,6 +210,15 @@ export function TranslationList({
                 ? `${deletingTranslation.providerLabel} · ${deletingTranslation.modelLabel}`
                 : "selected"}{" "}
               translation. This cannot be undone.
+              {deletingTranslation &&
+              (deletingTranslation.status === "QUEUED" ||
+                deletingTranslation.status === "PROCESSING") ? (
+                <>
+                  {" "}
+                  The background job for this translation will stop if it is
+                  still running.
+                </>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
