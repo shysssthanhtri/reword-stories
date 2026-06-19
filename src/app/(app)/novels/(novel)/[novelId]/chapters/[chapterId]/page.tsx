@@ -4,13 +4,8 @@ import { notFound } from "next/navigation"
 
 import { ChapterDetailHeader } from "@/components/chapters/chapter-detail-header"
 import { ChapterRawContent } from "@/components/chapters/chapter-raw-content"
+import { TranslationList } from "@/components/translations/translation-list"
 import { Button } from "@/components/ui/button"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty"
 import { routes } from "@/configs/routes"
 import { api } from "@/trpc/server"
 
@@ -25,9 +20,13 @@ export default async function ChapterDetailPage({
   const caller = await api()
 
   let chapter
+  let translations
 
   try {
-    chapter = await caller.chapters.getById({ id: chapterId })
+    ;[chapter, translations] = await Promise.all([
+      caller.chapters.getById({ id: chapterId }),
+      caller.translations.listByChapter({ chapterId }),
+    ])
   } catch (error) {
     if (error instanceof TRPCError && error.code === "NOT_FOUND") {
       notFound()
@@ -39,6 +38,12 @@ export default async function ChapterDetailPage({
   if (chapter.novelId !== novelId) {
     notFound()
   }
+
+  const serializedTranslations = translations.map((translation) => ({
+    ...translation,
+    createdAt: translation.createdAt.toISOString(),
+    updatedAt: translation.updatedAt.toISOString(),
+  }))
 
   return (
     <div className="mx-auto flex w-full flex-col gap-6">
@@ -61,15 +66,23 @@ export default async function ChapterDetailPage({
       <ChapterRawContent rawContent={chapter.rawContent} />
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Translations</h2>
-        <Empty className="border">
-          <EmptyHeader>
-            <EmptyTitle>No translations yet</EmptyTitle>
-            <EmptyDescription>
-              Translation jobs will be available in a future update.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-medium">Translations</h2>
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={
+              <Link href={routes.chapterTranslate(novelId, chapterId)} />
+            }
+          >
+            New translation
+          </Button>
+        </div>
+        <TranslationList
+          novelId={novelId}
+          chapterId={chapterId}
+          initialTranslations={serializedTranslations}
+        />
       </section>
     </div>
   )
